@@ -1,5 +1,6 @@
 using HDiscontinuousGalerkin
 using Base.Test
 
-# write your own tests here
-@test 1 == 2
+@time @testset "Test mesh reader" begin include("test_mesh.jl") end
+@time @testset "Test quadrature rules" begin include("test_quadrature.jl") end
+@time @testset "Test basis" begin include("test_basis.jl") end
