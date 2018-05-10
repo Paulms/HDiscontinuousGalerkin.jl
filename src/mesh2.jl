@@ -8,24 +8,24 @@ end
 
 get_coords(node::Node) = node.x
 
-struct Element
+struct Cell
     nodes::Vector{Int64}
     faces::Vector{Int64}
 end
 struct Face
-    elements::Vector{Int64}
+    cells::Vector{Int64}
     nodes::Vector{Int64}
     ref::Int64
 end
 struct PolygonalMesh{T} <: AbstractPolygonalMesh
-    elements::Vector{Element}
+    cells::Vector{Cell}
     nodes::Vector{Node{T}}
     faces::Vector{Face}
 end
 
 #Only working for simplices
-function get_element_diameter(mesh::PolygonalMesh{T}, idx::Int) where {T}
-    K = mesh.elements[idx]
+function get_cell_diameter(mesh::PolygonalMesh{T}, idx::Int) where {T}
+    K = mesh.cells[idx]
     h = zero(eltype(T))
     for k in K.faces
         σ = mesh.faces[k]
@@ -80,9 +80,9 @@ function parse_faces!(faces,root_file)
     end
 end
 
-function parse_elements!(elements,faces,root_file)
+function parse_cells!(cells,faces,root_file)
     all_nodes = Vector{Vector{Node}}()
-    #read element nodes
+    #read cell nodes
     open(root_file*".ele") do f
         first_line = true
         n_el = 0
@@ -103,15 +103,15 @@ function parse_elements!(elements,faces,root_file)
                         for (j,face) in enumerate(faces)
                             if sort(face.nodes) == sort(c_face)
                                 el_faces[i] = j
-                                if !(n_el in face.elements)
-                                    push!(face.elements,n_el)
+                                if !(n_el in face.cells)
+                                    push!(face.cells,n_el)
                                 end
                             end
                         end
                     end
-                    #save element
-                    element = Element(el_nodes, el_faces)
-                    push!(elements, element)
+                    #save cell
+                    cell = Cell(el_nodes, el_faces)
+                    push!(cells, cell)
                 end
             end
         end
@@ -126,9 +126,9 @@ Ex: `parse_mesh_triangle("figure.1")`
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces = Vector{Face}()
-    elements = Vector{Element}()
+    cells = Vector{Cell}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces,root_file)
-    parse_elements!(elements, faces, root_file)
-    PolygonalMesh{typeof(nodes[1].x)}(elements, nodes, faces)
+    parse_cells!(cells, faces, root_file)
+    PolygonalMesh{typeof(nodes[1].x)}(cells, nodes, faces)
 end

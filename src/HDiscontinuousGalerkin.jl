@@ -17,9 +17,9 @@ include("GrundmannMoellerQuad.jl")
 
 # Function exports
 # mesh
-export parse_mesh_triangle, element_diameter, get_coordinates
-export nodes, faces, elements, get_elements, get_faces, get_nodes, node
-export Element, Node, Face, PolygonalMesh
+export parse_mesh_triangle, cell_diameter, get_coordinates
+export nodes, faces, cells, get_cells, get_faces, get_nodes, node
+export Cell, Node, Face, PolygonalMesh
 
 # Quadratures
 

@@ -15,34 +15,34 @@ get coordinates of a node
 """
 get_coordinates(node::Node) = node.x
 
-struct Element
+struct Cell
     nodes::Vector{Int64}
     faces::Vector{Int64}
 end
 struct Face
-    elements::Vector{Int64}
+    cells::Vector{Int64}
     nodes::Vector{Int64}
     ref::Int64
 end
 struct PolygonalMesh{dims,Type} <: AbstractPolygonalMesh
-    elements::Vector{Element}
+    cells::Vector{Cell}
     nodes::Vector{Node{dims,Type}}
     faces::Vector{Face}
 end
-get_elements(mesh::PolygonalMesh) = mesh.elements
+get_cells(mesh::PolygonalMesh) = mesh.cells
 get_nodes(mesh::PolygonalMesh) = mesh.nodes
 get_faces(mesh::PolygonalMesh) = mesh.faces
 node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
-node(idx::Int, ele::Element, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
+node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
 ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
 
-nodes(ele::Element, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
+nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
 nodes(face::Face, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in face.nodes]
-faces(ele::Element, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
-elements(face::Face, mesh::PolygonalMesh) = [mesh.elements[ele] for ele in face.elements]
+faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
+cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in face.cells]
 
-function element_diameter(mesh::PolygonalMesh{N,T}, idx::Int) where {N,T}
-    K = get_elements(mesh)[idx]
+function cell_diameter(mesh::PolygonalMesh{N,T}, idx::Int) where {N,T}
+    K = get_cells(mesh)[idx]
     h = zero(T)
      for k in K.faces
         σ = mesh.faces[k]
@@ -97,9 +97,9 @@ function parse_faces!(faces,root_file)
     end
 end
 
-function parse_elements!(elements,faces,root_file)
+function parse_cells!(cells,faces,root_file)
     all_nodes = Vector{Vector{Node}}()
-    #read element nodes
+    #read cell nodes
     open(root_file*".ele") do f
         first_line = true
         n_el = 0
@@ -120,15 +120,15 @@ function parse_elements!(elements,faces,root_file)
                         for (j,face) in enumerate(faces)
                             if sort(face.nodes) == sort(c_face)
                                 el_faces[i] = j
-                                if !(n_el in face.elements)
-                                    push!(face.elements,n_el)
+                                if !(n_el in face.cells)
+                                    push!(face.cells,n_el)
                                 end
                             end
                         end
                     end
-                    #save element
-                    element = Element(el_nodes, el_faces)
-                    push!(elements, element)
+                    #save cell
+                    cell = Cell(el_nodes, el_faces)
+                    push!(cells, cell)
                 end
             end
         end
@@ -143,9 +143,9 @@ Ex: `parse_mesh_triangle("figure.1")`
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces = Vector{Face}()
-    elements = Vector{Element}()
+    cells = Vector{Cell}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces,root_file)
-    parse_elements!(elements, faces, root_file)
-    PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(elements, nodes, faces)
+    parse_cells!(cells, faces, root_file)
+    PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, faces)
 end
