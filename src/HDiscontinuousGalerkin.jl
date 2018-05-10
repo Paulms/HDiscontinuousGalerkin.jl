@@ -1,23 +1,18 @@
 module HDiscontinuousGalerkin
 
-using StaticArrays
+using Tensors
 using PolynomialBases
 
 abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
 
 struct RefSimplex <: AbstractRefShape end
-struct GrundmannMoeller <: AbstractQuadratureRule end
-
-struct QuadratureRule{dim,shape,T}
-    weights::Vector{T}
-    points::Vector{SVector{dim,T}}
-end
 
 abstract type Interpolation{dim,shape,order} end
 
 include("mesh.jl")
 include("basis.jl")
+include("quadrature.jl")
 include("GrundmannMoellerQuad.jl")
 
 # Function exports
@@ -31,6 +26,7 @@ export Element, Node, Face, PolygonalMesh
 export QuadratureRule
 export RefSimplex
 export GrundmannMoeller
+export getpoints, getweights
 
 # basis
 export Dubiner

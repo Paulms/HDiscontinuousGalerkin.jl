@@ -1,11 +1,7 @@
 for dim in (2,3)
     @eval begin
-        function (::Type{QuadratureRule{$dim,RefSimplex,GrundmannMoeller}})(s::Int)
-            p, weigths = _compute_p_w(s, $dim)
-            points = Vector{SVector{$dim,Float64}}(size(p,1))
-            for i in 1:size(p,1)
-                points[i] = SVector{$dim}(p[i,:])
-            end
+        function (::Type{QuadratureRule{$dim,RefSimplex}})(quad_type::GrundmannMoeller, s::Int)
+            points, weigths = _compute_p_w(s, $dim)
             return QuadratureRule{$dim,RefSimplex,Float64}(weigths, points)
         end
     end
@@ -17,15 +13,13 @@ function _compute_p_w(s, n, T = Float64)
     nnodes = binomial(n + s + 1, s)
     weights = Vector{T}(nnodes)
     kk = nnodes
-    points = Matrix{Rational{Int64}}(nnodes, n)
+    points = Vector{Vec{n,T}}(nnodes)
     exponentials = _get_all_exponentials(s, n+1)
     for i = 0:s
-        w = ((-1)^i * 2.0^(-2*s) * (d+n-2*i)^d)/(factorial(i) * factorial(d+n-i))
+        w::T = ((-1)^i * 2.0^(-2*s) * (d+n-2*i)^d)/(factorial(i) * factorial(d+n-i))
         for p in _get_all_exponentials(s-i, n+1)
             k += 1
-            for j in 2:(n+1)
-                points[k,j-1] = (2*p[j] + 1)//(d+n-2*i)
-            end
+            points[k] = Vec{n}(j -> (2*p[j+1] + 1)/(d+n-2*i))
             weights[k] = w
         end
     end
@@ -35,7 +29,7 @@ end
 function _get_all_exponentials(n,k)
     a = Vector{Int32}(k)
     exponentials = Vector{typeof(a)}(binomial(n+2,k-1))
-    t = n
+    t::Int32 = n
     h = 0
     a[1] = n
     a[2:k] = 0

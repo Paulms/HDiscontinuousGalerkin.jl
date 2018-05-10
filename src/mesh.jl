@@ -1,10 +1,13 @@
 # Abstract type for Polygonal Meshes
+using Tensors
+
 abstract type AbstractPolygonalMesh end
 
 struct Node{N,T}
-    x::SVector{N,T}
+    x::Vec{N, T}
     ref::Int64
 end
+Node(x::NTuple{dim,T}, ref::Int) where {dim,T} = Node(Vec{dim,T}(x), ref)
 
 """
 get_coords(node::Node) = node.x
@@ -66,8 +69,8 @@ function parse_nodes!(nodes,root_file)
                     first_line = false
                 else
                     #parse nodes
-                    pln = collect(read_line(ln, (Int,Float64,Float64,Int)))
-                    node = Node(SVector(pln[2:3]...),pln[4])
+                    pln = collect(read_line(ln, (Int,Float64,Float64,Int64)))
+                    node = Node((pln[2],pln[3]),pln[4])
                     push!(nodes,node)
                 end
             end

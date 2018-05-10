@@ -16,17 +16,24 @@ Return the polynomial order of the `Interpolation`
 """
 Compute the value of the shape functions at a point ξ for a given interpolation
 """
-function value(ip::Interpolation{dim}, ξ::AbstractVector) where {dim}
+function value(ip::Interpolation{dim}, ξ::Vec{dim,T}) where {dim,T}
     [value(ip, i, ξ) for i in 1:getnbasefunctions(ip)]
 end
 
 """
 Compute the gradients of the shape functions at a point ξ for a given interpolation
 """
-function derivative(ip::Interpolation{dim}, ξ::AbstractVector) where {dim}
+function derivative(ip::Interpolation{dim}, ξ::Vec{dim,T}) where {dim,T}
     [gradient_value(ip, i, ξ) for i in 1:getnbasefunctions(ip)]
 end
 
+function value(ip::Interpolation{dim}, j::Int, ξ::Tuple) where {dim}
+    value(ip,j,Vec{dim}(ξ))
+end
+
+function gradient_value(ip::Interpolation{dim}, j::Int, ξ::Tuple) where {dim}
+    gradient_value(ip,j,Vec{dim}(ξ))
+end
 ############
 # Dubiner #
 ###########
@@ -39,9 +46,9 @@ getnbasefunctions(::Dubiner{2,RefSimplex,order}) where {order} = (order+1)*(orde
 #faces(::Dubiner{2,RefSimplex,order}) where {order} = ((1,2), (2,3), (3,1))
 
 function reference_coordinates(::Dubiner{2,RefSimplex,order}) where {order}
-    return [SVector{2, Float64}((1.0, 0.0)),
-            SVector{2, Float64}((0.0, 1.0)),
-            SVector{2, Float64}((0.0, 0.0))]
+    return [Vec{2, Float64}((1.0, 0.0)),
+            Vec{2, Float64}((0.0, 1.0)),
+            Vec{2, Float64}((0.0, 0.0))]
 end
 
 """
@@ -49,7 +56,7 @@ value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::AbstactVector) where {order}
 Compute value of dubiner basis `j` at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-function value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::AbstractVector{T}) where {order, T}
+function value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::Vec{2,T}) where {order, T}
     r = ξ[1]
     s = ξ[2]
     if j == 0; return zero(T)
@@ -77,7 +84,7 @@ gradient_value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::AbstactVector) where
 Compute value of dubiner basis `j` derivative at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-function gradient_value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::AbstractVector{T}) where {order,T}
+function gradient_value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::Vec{2,T}) where {order,T}
     r = ξ[1]
     s = ξ[2]
     if j == 0; return [zero(T),zero(T)]
@@ -120,6 +127,7 @@ function djacobi(x,n::Integer,α, β)
     if n <= 0;return a;end
     return (n+α+β+1)/2*jacobi(x,n-1,α+1,β+1)
 end
+
 """
 dubiner(x,y,n::Integer,m::Integer)
 Compute the dubiner polynomial of degree `n`,`m` at point (x,y)
