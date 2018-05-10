@@ -1,8 +1,8 @@
 for dim in (2,3)
     @eval begin
-        function (::Type{QuadratureRule{$dim,RefSimplex}})(quad_type::GrundmannMoeller, s::Int)
+        function (::Type{QuadratureRule{$dim,RefTetrahedron}})(quad_type::GrundmannMoeller, s::Int)
             points, weigths = _compute_p_w(s, $dim)
-            return QuadratureRule{$dim,RefSimplex,Float64}(weigths, points)
+            return QuadratureRule{$dim,RefTetrahedron,Float64}(weigths, points)
         end
     end
 end

@@ -6,7 +6,7 @@ using PolynomialBases
 abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
 
-struct RefSimplex <: AbstractRefShape end
+struct RefTetrahedron <: AbstractRefShape end
 
 abstract type Interpolation{dim,shape,order} end
 
@@ -24,7 +24,7 @@ export Element, Node, Face, PolygonalMesh
 # Quadratures
 
 export QuadratureRule
-export RefSimplex
+export RefTetrahedron
 export GrundmannMoeller
 export getpoints, getweights
 

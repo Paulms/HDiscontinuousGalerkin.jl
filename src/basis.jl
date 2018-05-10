@@ -39,24 +39,24 @@ end
 ###########
 struct Dubiner{dim,shape,order} <: Interpolation{dim,shape,order} end
 
-getnbasefunctions(::Dubiner{2,RefSimplex,order}) where {order} = (order+1)*(order+2)/2
-#nvertexdofs(::Dubiner{2,RefSimplex,order}) = 1
+getnbasefunctions(::Dubiner{2,RefTetrahedron,order}) where {order} = (order+1)*(order+2)/2
+#nvertexdofs(::Dubiner{2,RefTetrahedron,order}) = 1
 
-#vertices(::Dubiner{2,RefSimplex,order}) where {order} = (1,2,3)
-#faces(::Dubiner{2,RefSimplex,order}) where {order} = ((1,2), (2,3), (3,1))
+#vertices(::Dubiner{2,RefTetrahedron,order}) where {order} = (1,2,3)
+#faces(::Dubiner{2,RefTetrahedron,order}) where {order} = ((1,2), (2,3), (3,1))
 
-function reference_coordinates(::Dubiner{2,RefSimplex,order}) where {order}
+function reference_coordinates(::Dubiner{2,RefTetrahedron,order}) where {order}
     return [Vec{2, Float64}((1.0, 0.0)),
             Vec{2, Float64}((0.0, 1.0)),
             Vec{2, Float64}((0.0, 0.0))]
 end
 
 """
-value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::AbstactVector) where {order}
+value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
 Compute value of dubiner basis `j` at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-function value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::Vec{2,T}) where {order, T}
+function value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::Vec{2,T}) where {order, T}
     r = ξ[1]
     s = ξ[2]
     if j == 0; return zero(T)
@@ -80,11 +80,11 @@ function value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::Vec{2,T}) where {ord
 end
 
 """
-gradient_value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::AbstactVector) where {order}
+gradient_value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
 Compute value of dubiner basis `j` derivative at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-function gradient_value(ip::Dubiner{2,RefSimplex,order}, j::Int, ξ::Vec{2,T}) where {order,T}
+function gradient_value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::Vec{2,T}) where {order,T}
     r = ξ[1]
     s = ξ[2]
     if j == 0; return [zero(T),zero(T)]
