@@ -8,8 +8,8 @@ function get_affine_map(x, ξ)
     n = length(x[1])
     T = eltype(x[1])
 
-    B = zeros(n*(n+1), n*(n+1))
-    L = zeros(n*(n+1))
+    B = zeros(T, n*(n+1), n*(n+1))
+    L = zeros(T, n*(n+1))
 
     for i in 1:length(x)
         for j in 1:n
@@ -19,7 +19,6 @@ function get_affine_map(x, ξ)
             B[row, n * n + j] = one(T)
         end
     end
-
     X = B\L
     return reshape(X[1:n*n], (n, n)), X[n*n+1:end]
 end

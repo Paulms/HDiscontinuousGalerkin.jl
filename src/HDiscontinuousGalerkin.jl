@@ -8,6 +8,7 @@ abstract type AbstractQuadratureRule end
 
 abstract type Interpolation{dim,shape,order} end
 
+include("utils.jl")
 include("mesh.jl")
 include("shapes.jl")
 include("basis.jl")
@@ -34,4 +35,8 @@ export Dubiner, Lagrange
 export dubiner_basis, ∇dubiner_basis
 export value, derivative, gradient_value
 export getnbasefunctions
+
+#utils
+export get_affine_map
+
 end # module
