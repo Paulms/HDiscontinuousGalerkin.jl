@@ -39,17 +39,11 @@ end
 ###########
 struct Dubiner{dim,shape,order} <: Interpolation{dim,shape,order} end
 
-getnbasefunctions(::Dubiner{2,RefTetrahedron,order}) where {order} = (order+1)*(order+2)/2
+getnbasefunctions(::Dubiner{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
 #nvertexdofs(::Dubiner{2,RefTetrahedron,order}) = 1
 
 #vertices(::Dubiner{2,RefTetrahedron,order}) where {order} = (1,2,3)
 #faces(::Dubiner{2,RefTetrahedron,order}) where {order} = ((1,2), (2,3), (3,1))
-
-function reference_coordinates(::Dubiner{2,RefTetrahedron,1})
-    return [Vec{2, Float64}((1.0, 0.0)),
-            Vec{2, Float64}((0.0, 1.0)),
-            Vec{2, Float64}((0.0, 0.0))]
-end
 
 """
 value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
@@ -201,28 +195,21 @@ end
 ####################
 # Lagrange
 ####################
-struct Lagrange{dim,shape,order,T} where {T,T2} <: Interpolation{dim,shape,order}
-    nodal_basis_coefs::T
+struct Lagrange{dim,shape,order,T} <: Interpolation{dim,shape,order}
+    nodal_base_coefs::T
 end
 
-function (ip::Lagrange{dim,shape,order})()
-    nodals=(x->x((1.0,0.0)), x->x((0.0,1.0)), x->x((0.0,0.0)))
-    ip_prime = Dubiner{2,RefTetrahedron,order}()
-    npbasefuncs = getnbasefunctions(ip_prime)
-    nbasefuncs =  getnbasefunctions(ip)
-    @assert npbasefuncs == nbasefuncs "prime_basis has different number of basis functions than basis"
-    prime_basis = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
-    V = reshape([nodals[i](prime_basis[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
-    ip.nodal_basis_coefs = inv(V)
+function Lagrange{dim,shape,order}() where {dim, shape, order}
+    nodals=[x->x(point) for point in get_nodal_points(shape(), Val{dim}, order)]
+    ip_prime = Dubiner{dim,shape,order}()
+    nbasefuncs = getnbasefunctions(ip_prime)
+    prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
+    V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
+    nodal_base_coefs = inv(V)
+    Lagrange{dim, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs)
 end
 
-getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = (order+1)*(order+2)/2
-
-function reference_coordinates(::Lagrange{2,RefTetrahedron,1})
-    return [Vec{2, Float64}((1.0, 0.0)),
-            Vec{2, Float64}((0.0, 1.0)),
-            Vec{2, Float64}((0.0, 0.0))]
-end
+getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
 
 """
 value(ip::Lagrange{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
@@ -230,9 +217,9 @@ Compute value of dubiner basis `j` at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
 function value(ip::Lagrange{2,RefTetrahedron,order}, k::Int, ξ::Vec{2,T}) where {order, T}
-    if k > getnbasefunctions(ip);throw(ArgumentError("no shape function $i for interpolation $ip"));end
+    if k > getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
     n = getnbasefunctions(ip)
-    dot(ip.nodal_basis_coefs[:,k], [value(Dubiner{2,RefTetrahedron,order}(), j, ξ) for j in 1:n])
+    dot(ip.nodal_base_coefs[:,k], value(Dubiner{2,RefTetrahedron,order}(), ξ))
 end
 
 """
@@ -241,7 +228,7 @@ Compute value of dubiner basis `j` derivative at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
 function gradient_value(ip::Lagrange{2,RefTetrahedron,order}, k::Int, ξ::Vec{2,T}) where {order,T}
-    if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $i for interpolation $ip"));end
+    if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
     # a = nodal_basis_coefs[1,k]*gradient_value(interpolation, 1, ξ)
     # n = getnbasefunctions(ip)
     # for j in 2:n
