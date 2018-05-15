@@ -23,7 +23,7 @@ function _compute_p_w(s, n, T = Float64)
             weights[k] = w
         end
     end
-    return points, weights./sum(weights)
+    return points, weights./sum(2*weights)
 end
 
 function _get_all_exponentials(n,k)

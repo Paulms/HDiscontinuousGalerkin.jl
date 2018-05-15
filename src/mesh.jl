@@ -5,7 +5,7 @@ abstract type AbstractPolygonalMesh end
 
 struct Node{N,T}
     x::Vec{N, T}
-    ref::Int64
+    ref::Int
 end
 Node(x::NTuple{dim,T}, ref::Int) where {dim,T} = Node(Vec{dim,T}(x), ref)
 

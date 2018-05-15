@@ -1,3 +1,4 @@
 julia 0.6
 PolynomialBases 0.3.0
 Tensors 0.7.0
+FastGaussQuadrature 0.3.0

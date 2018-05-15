@@ -2,6 +2,7 @@ module HDiscontinuousGalerkin
 
 using Tensors
 using PolynomialBases
+using FastGaussQuadrature
 
 abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
@@ -14,6 +15,7 @@ include("shapes.jl")
 include("basis.jl")
 include("quadrature.jl")
 include("GrundmannMoellerQuad.jl")
+include("StrangQuad.jl")
 
 # Function exports
 # mesh
@@ -27,7 +29,7 @@ export get_nodal_points
 # Quadratures
 export QuadratureRule
 export RefTetrahedron
-export GrundmannMoeller
+export GrundmannMoeller, Strang
 export getpoints, getweights
 
 # basis
