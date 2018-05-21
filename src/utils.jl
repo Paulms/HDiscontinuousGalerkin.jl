@@ -22,3 +22,16 @@ function get_affine_map(x, ξ)
     X = B\L
     return reshape(X[1:n*n], (n, n)), X[n*n+1:end]
 end
+
+"""
+function integrate(f::function,qr::QuadratureRule)
+integrate function f on reference shape of quadrature qr
+"""
+function integrate(f::Function,qr::QuadratureRule)
+    p = getpoints(qr); w = getweights(qr)
+    int_val = zero(typeof(f(p[1])))
+    for (i,x) in enumerate(p)
+        int_val += f(x)*w[i]
+    end
+    int_val
+end

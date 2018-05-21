@@ -9,11 +9,11 @@ abstract type AbstractQuadratureRule end
 
 abstract type Interpolation{dim,shape,order} end
 
-include("utils.jl")
 include("mesh.jl")
 include("shapes.jl")
 include("basis.jl")
 include("quadrature.jl")
+include("utils.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 
@@ -39,6 +39,6 @@ export value, derivative, gradient_value
 export getnbasefunctions
 
 #utils
-export get_affine_map
+export get_affine_map, integrate
 
 end # module

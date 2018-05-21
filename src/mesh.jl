@@ -69,7 +69,7 @@ function parse_nodes!(nodes,root_file)
                     first_line = false
                 else
                     #parse nodes
-                    pln = collect(read_line(ln, (Int,Float64,Float64,Int64)))
+                    pln = collect(read_line(ln, (Int,Float64,Float64,Int)))
                     node = Node((pln[2],pln[3]),pln[4])
                     push!(nodes,node)
                 end
