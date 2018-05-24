@@ -21,9 +21,10 @@ include("StrangQuad.jl")
 export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
+export numcells
 
 # Shapes
-export get_nodal_points
+export get_nodal_points, volume
 
 # Quadratures
 export QuadratureRule

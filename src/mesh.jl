@@ -15,26 +15,31 @@ get coordinates of a node
 """
 get_coordinates(node::Node) = node.x
 
-struct Cell
-    nodes::Vector{Int64}
-    faces::Vector{Int64}
+struct Cell{T <: Int,N,T2}
+    nodes::Vector{T}
+    faces::Vector{T}
+    orientation::Vector{Bool}
+    normals::Vector{Vec{N,T2}}
 end
-struct Face
-    cells::Vector{Int64}
-    nodes::Vector{Int64}
-    ref::Int64
+
+struct Face{T <: Int}
+    cells::Vector{T}
+    nodes::Vector{T}
+    ref::Int64  #To check if is belongs to the boundary
 end
 struct PolygonalMesh{dims,Type} <: AbstractPolygonalMesh
     cells::Vector{Cell}
     nodes::Vector{Node{dims,Type}}
     faces::Vector{Face}
 end
+get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
 get_cells(mesh::PolygonalMesh) = mesh.cells
 get_nodes(mesh::PolygonalMesh) = mesh.nodes
 get_faces(mesh::PolygonalMesh) = mesh.faces
 node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
 node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
 ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
+@inline numcells(mesh::PolygonalMesh) = length(mesh.cells)
 
 nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
 nodes(face::Face, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in face.nodes]
@@ -51,7 +56,6 @@ function cell_diameter(mesh::PolygonalMesh{N,T}, idx::Int) where {N,T}
     end
     h
 end
-
 
 # Read mesh from a triangle generated file
 function read_line(ln, types)
@@ -126,8 +130,10 @@ function parse_cells!(cells,faces,root_file)
                             end
                         end
                     end
+                    orientation = [true,true,true]
+                    normals = fill(zero(Vec{2,Float64}) * Float64(NaN), 3)
                     #save cell
-                    cell = Cell(el_nodes, el_faces)
+                    cell = Cell(el_nodes, el_faces, orientation, normals)
                     push!(cells, cell)
                 end
             end
@@ -147,5 +153,25 @@ function parse_mesh_triangle(root_file)
     parse_nodes!(nodes,root_file)
     parse_faces!(faces,root_file)
     parse_cells!(cells, faces, root_file)
+    #check consistent cells orientation and compute normals
+    for cell in cells
+        coords = [nodes[j].x for j in cell.nodes]
+        a = coords[2]-coords[1]
+        b = coords[3]-coords[1]
+        if (a[1]*b[2]-a[2]*b[1]) < 0
+            #swap vertices 2 and 3
+            cell.nodes[2],cell.nodes[3] = cell.nodes[3],cell.nodes[2]
+            cell.faces = reverse(cell.faces)
+        end
+        #Compute normals
+        for (i,k) in enumerate(((1,2),(2,3),(3,1)))
+            v1 =  coords[k[2]] - coords[k[1]]
+            n1 = Vec{2}([v1[2], -v1[1]])
+            cell.normals[i] = n1/norm(n1)
+            #Compute faces orientation
+            #Just to standarize jump definitions
+            cell.orientation[i] = cell.nodes[k[2]] > cell.nodes[k[1]]
+        end
+    end
     PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, faces)
 end
