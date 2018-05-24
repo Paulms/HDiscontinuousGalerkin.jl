@@ -27,6 +27,6 @@ end
 
 # Get GaussLegendre weigths and points from FastGaussQuadrature
 function (::Type{QuadratureRule{1,RefTetrahedron}})(quad_type::GaussLegendre, order::Int)
-    points, weights = gausslegendre(order);
-    return QuadratureRule{1,RefTetrahedron,Float64}(weigths, points)
+    points, weights = gausslegendre(order)
+    return QuadratureRule{1,RefTetrahedron,Float64}(weights, [Tensor{1,1}([x]) for x in points])
 end

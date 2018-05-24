@@ -111,6 +111,33 @@ function gradient_value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::Vec{2,T
 end
 
 """
+    jacobi(x, p::Integer, α, β)
+Evaluate the Legendre polynomial with parameters `α`, `β` of degree `p` at `x`
+using the three term recursion [Karniadakis and Sherwin, Spectral/hp Element
+Methods for CFD, Appendix A].
+Author: H. Ranocha (see PolynomialBases.jl)
+"""
+function jacobi(x, p::Integer, α, β)
+    T = typeof( (2+α+β)*x / 2 )
+    a = one(T)
+    b = ((2+α+β)*x + α - β) / 2
+    if p <= 0
+        return a
+    elseif p == 1
+        return b
+    end
+
+    for n in 2:p
+        a1 = 2n*(n+α+β)*(2n-2+α+β)
+        a2 = (2n-1+α+β)*(α+β)*(α-β)
+        a3 = (2n-2+α+β)*(2n-1+α+β)*(2n+α+β)
+        a4 = 2*(n-1+α)*(n-1+β)*(2n+α+β)
+        a, b = b, ( (a2+a3*x)*b - a4*a ) / a1
+    end
+    b
+end
+
+"""
 djacobi(x,n::Integer,α, β)
 Evaluate the `n` order jacobi polynomial derivative
 at point x∈[-1,1]
@@ -183,6 +210,7 @@ end
 Compute the gradient of dubiner basis `j` at point (x,y)
 on the reference triangle ((0,0),(1,0),(0,1))
 """
+#TODO: It could be better to return a tensor
 function ∇dubiner_basis(x,y,j::Integer)
     #Compute degrees
     t=-3/2+(1/2)*sqrt(1+8*j)
@@ -213,7 +241,7 @@ getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order
 
 """
 value(ip::Lagrange{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
-Compute value of dubiner basis `j` at point ξ
+Compute value of Lagrange basis `j` at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
 function value(ip::Lagrange{2,RefTetrahedron,order}, k::Int, ξ::Vec{2,T}) where {order, T}
@@ -224,7 +252,7 @@ end
 
 """
 gradient_value(ip::Lagrange{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
-Compute value of dubiner basis `j` derivative at point ξ
+Compute value of Lagrange basis `j` derivative at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
 function gradient_value(ip::Lagrange{2,RefTetrahedron,order}, k::Int, ξ::Vec{2,T}) where {order,T}
@@ -236,4 +264,42 @@ function gradient_value(ip::Lagrange{2,RefTetrahedron,order}, k::Int, ξ::Vec{2,
     # end
     # return a
     gradient(ξ -> value(ip, k, ξ), ξ)
+end
+
+####################
+# Legendre
+####################
+struct Legendre{dim,shape,order} <: Interpolation{dim,shape,order} end
+
+getnbasefunctions(::Legendre{1,RefTetrahedron,order}) where {order} = order + 1
+
+"""
+value(ip::Legendre{1,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
+Compute value of Legendre basis `j` at point ξ
+on the reference line (-1,1)
+"""
+function value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
+    if k > getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
+    return sqrt((2*k+1)/2)*jacobi(ξ[1],k,0.0,0.0)
+end
+
+"""
+gradient_value(ip::Legendre{1,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
+Compute value of Legendre basis `j` derivative at point ξ
+on the reference line (-1,1)
+"""
+function gradient_value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
+    if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
+    # a = 0; b = 1;
+    # if k==0
+    #     return a
+    # elseif k==1
+    #     return b
+    # else
+    #     for n=2:k
+    #         J =((n+1)/2)* jacobi(ξ,k-1,1,1) ;
+    #     end
+    # end
+    # return 2*sqrt(2*k+1)*J
+    gradient(ξ -> value(ip, k, ξ), ξ)[1]
 end

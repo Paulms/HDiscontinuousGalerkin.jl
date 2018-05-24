@@ -1,7 +1,6 @@
 module HDiscontinuousGalerkin
 
 using Tensors
-using PolynomialBases
 using FastGaussQuadrature
 
 abstract type AbstractRefShape end
@@ -29,11 +28,11 @@ export get_nodal_points
 # Quadratures
 export QuadratureRule
 export RefTetrahedron
-export GrundmannMoeller, Strang
+export GrundmannMoeller, Strang, GaussLegendre
 export getpoints, getweights
 
 # basis
-export Dubiner, Lagrange
+export Dubiner, Lagrange, jacobi, Legendre
 export dubiner_basis, ∇dubiner_basis
 export value, derivative, gradient_value
 export getnbasefunctions
