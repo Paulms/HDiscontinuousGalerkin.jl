@@ -7,6 +7,7 @@ abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
 
 abstract type Interpolation{dim,shape,order} end
+abstract type DiscreteFunctionSpace{dim,T,refshape} end
 
 include("mesh.jl")
 include("shapes.jl")
@@ -15,6 +16,7 @@ include("quadrature.jl")
 include("utils.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
+include("FunctionSpace.jl")
 
 # Function exports
 # mesh
@@ -29,7 +31,7 @@ export get_nodal_points, volume
 # Quadratures
 export QuadratureRule
 export RefTetrahedron
-export GrundmannMoeller, Strang, GaussLegendre
+export DefaultQuad, GrundmannMoeller, Strang, GaussLegendre
 export getpoints, getweights
 
 # basis
@@ -37,8 +39,13 @@ export Dubiner, Lagrange, jacobi, Legendre
 export dubiner_basis, ∇dubiner_basis
 export value, derivative, gradient_value
 export getnbasefunctions
+export get_default_geom_interpolator
 
 #utils
 export get_affine_map, integrate
+
+#FunctionSpaces
+export VectorFunctionSpace
+export getnquadpoints, getdetJdV, shape_value
 
 end # module

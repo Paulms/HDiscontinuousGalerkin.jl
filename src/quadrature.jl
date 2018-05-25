@@ -30,3 +30,7 @@ function (::Type{QuadratureRule{1,RefTetrahedron}})(quad_type::GaussLegendre, or
     points, weights = gausslegendre(order)
     return QuadratureRule{1,RefTetrahedron,Float64}(weights, [Tensor{1,1}([x]) for x in points])
 end
+
+function (::Type{QuadratureRule{1,RefTetrahedron}})(quad_type::DefaultQuad, order::Int)
+    return QuadratureRule{1,RefTetrahedron}(GaussLegendre(), order)
+end
