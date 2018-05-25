@@ -90,31 +90,31 @@ on the reference triangle ((0,0),(1,0),(0,1))
 function gradient_value(ip::Dubiner{2,RefTetrahedron,order}, j::Int, ξ::Vec{2,T}) where {order,T}
     r = ξ[1]
     s = ξ[2]
-    if j == 0; return [zero(T),zero(T)]
-    elseif j == 1; return [zero(T),zero(T)]
-    elseif j == 2; return [4*sqrt(3), 2*sqrt(3)]*one(T)
-    elseif j == 3; return [zero(T), one(T)*6]
-    elseif j == 4; return [12*sqrt(30)*r + 6*sqrt(30)*(s - 1),
-                            6*sqrt(30)*r + 2*sqrt(30)*s - 2*sqrt(30)]
-    elseif j == 5; return [6*sqrt(2)*(5*s - 1),
-                            30*sqrt(2)*r + 30*sqrt(2)*s - 18*sqrt(2)]
-    elseif j == 6; return [zero(T),20*sqrt(6)*s - 8*sqrt(6)]
-    elseif j == 7; return [24*sqrt(14)*(5*r^2 + 5*r*(s - 1) + s^2 - 2*s + 1),
-                            60*sqrt(14)*r^2 + r*(48*sqrt(14)*s - 48*sqrt(14)) + 6*sqrt(14)*s^2 - 12*sqrt(14)*s + 6*sqrt(14)]
-    elseif j == 8; return [12*sqrt(10)*(7*s - 1)*(2*r + s - 1),
-                            84*sqrt(10)*r^2 + r*(168*sqrt(10)*s - 96*sqrt(10)) + 42*sqrt(10)*s^2 - 60*sqrt(10)*s + 18*sqrt(10)]
-    elseif j == 9; return [4*sqrt(6)*(21*s^2 - 12*s + 1),
-                            r*(168*sqrt(6)*s - 48*sqrt(6)) + 126*sqrt(6)*s^2 - 132*sqrt(6)*s + 26*sqrt(6)]
-    elseif j == 10; return [zero(T),210*sqrt(2)*s^2 - 180*sqrt(2)*s + 30*sqrt(2)]
-    elseif j == 11; return [840*sqrt(10)*r^3 + 1260*sqrt(10)*r^2*(s - 1) + 540*sqrt(10)*r*(s^2 - 2*s + 1) + 60*sqrt(10)*(s^3 - 3*s^2 + 3*s - 1),
-                            420*sqrt(10)*r^3 + r^2*(540*sqrt(10)*s - 540*sqrt(10)) + r*(180*sqrt(10)*s^2 - 360*sqrt(10)*s + 180*sqrt(10)) + 12*sqrt(10)*s^3 - 36*sqrt(10)*s^2 + 36*sqrt(10)*s - 12*sqrt(10)]
-    elseif j == 12; return [12*sqrt(70)*(9*s - 1)*(5*r^2 + 5*r*(s - 1) + s^2 - 2*s + 1),
-                            180*sqrt(70)*r^3 + r^2*(540*sqrt(70)*s - 300*sqrt(70)) + r*(324*sqrt(70)*s^2 - 456*sqrt(70)*s + 132*sqrt(70)) + 36*sqrt(70)*s^3 - 84*sqrt(70)*s^2 + 60*sqrt(70)*s - 12*sqrt(70)]
-    elseif j == 13; return [30*sqrt(2)*(36*s^2 - 16*s + 1)*(2*r + s - 1),
-                            r^2*(2160*sqrt(2)*s - 480*sqrt(2)) + r*(3240*sqrt(2)*s^2 - 3120*sqrt(2)*s + 510*sqrt(2)) + 720*sqrt(2)*s^3 - 1320*sqrt(2)*s^2 + 690*sqrt(2)*s - 90*sqrt(2)]
-    elseif j == 14; return [2*sqrt(30)*(84*s^3 - 84*s^2 + 21*s - 1),
-                            r*(504*sqrt(30)*s^2 - 336*sqrt(30)*s + 42*sqrt(30)) + 336*sqrt(30)*s^3 - 504*sqrt(30)*s^2 + 210*sqrt(30)*s - 22*sqrt(30)]
-    elseif j == 15; return [zero(T),504*sqrt(10)*s^3 - 672*sqrt(10)*s^2 + 252*sqrt(10)*s - 24*sqrt(10)]
+    if j == 0; return Vec{2}([zero(T),zero(T)])
+    elseif j == 1; return Vec{2}([zero(T),zero(T)])
+    elseif j == 2; return Vec{2}([4*sqrt(3), 2*sqrt(3)]*one(T))
+    elseif j == 3; return Vec{2}([zero(T), one(T)*6])
+    elseif j == 4; return Vec{2}([12*sqrt(30)*r + 6*sqrt(30)*(s - 1),
+                            6*sqrt(30)*r + 2*sqrt(30)*s - 2*sqrt(30)])
+    elseif j == 5; return Vec{2}([6*sqrt(2)*(5*s - 1),
+                            30*sqrt(2)*r + 30*sqrt(2)*s - 18*sqrt(2)])
+    elseif j == 6; return Vec{2}([zero(T),20*sqrt(6)*s - 8*sqrt(6)])
+    elseif j == 7; return Vec{2}([24*sqrt(14)*(5*r^2 + 5*r*(s - 1) + s^2 - 2*s + 1),
+                            60*sqrt(14)*r^2 + r*(48*sqrt(14)*s - 48*sqrt(14)) + 6*sqrt(14)*s^2 - 12*sqrt(14)*s + 6*sqrt(14)])
+    elseif j == 8; return Vec{2}([12*sqrt(10)*(7*s - 1)*(2*r + s - 1),
+                            84*sqrt(10)*r^2 + r*(168*sqrt(10)*s - 96*sqrt(10)) + 42*sqrt(10)*s^2 - 60*sqrt(10)*s + 18*sqrt(10)])
+    elseif j == 9; return Vec{2}([4*sqrt(6)*(21*s^2 - 12*s + 1),
+                            r*(168*sqrt(6)*s - 48*sqrt(6)) + 126*sqrt(6)*s^2 - 132*sqrt(6)*s + 26*sqrt(6)])
+    elseif j == 10; return Vec{2}([zero(T),210*sqrt(2)*s^2 - 180*sqrt(2)*s + 30*sqrt(2)])
+    elseif j == 11; return Vec{2}([840*sqrt(10)*r^3 + 1260*sqrt(10)*r^2*(s - 1) + 540*sqrt(10)*r*(s^2 - 2*s + 1) + 60*sqrt(10)*(s^3 - 3*s^2 + 3*s - 1),
+                            420*sqrt(10)*r^3 + r^2*(540*sqrt(10)*s - 540*sqrt(10)) + r*(180*sqrt(10)*s^2 - 360*sqrt(10)*s + 180*sqrt(10)) + 12*sqrt(10)*s^3 - 36*sqrt(10)*s^2 + 36*sqrt(10)*s - 12*sqrt(10)])
+    elseif j == 12; return Vec{2}([12*sqrt(70)*(9*s - 1)*(5*r^2 + 5*r*(s - 1) + s^2 - 2*s + 1),
+                            180*sqrt(70)*r^3 + r^2*(540*sqrt(70)*s - 300*sqrt(70)) + r*(324*sqrt(70)*s^2 - 456*sqrt(70)*s + 132*sqrt(70)) + 36*sqrt(70)*s^3 - 84*sqrt(70)*s^2 + 60*sqrt(70)*s - 12*sqrt(70)])
+    elseif j == 13; return Vec{2}([30*sqrt(2)*(36*s^2 - 16*s + 1)*(2*r + s - 1),
+                            r^2*(2160*sqrt(2)*s - 480*sqrt(2)) + r*(3240*sqrt(2)*s^2 - 3120*sqrt(2)*s + 510*sqrt(2)) + 720*sqrt(2)*s^3 - 1320*sqrt(2)*s^2 + 690*sqrt(2)*s - 90*sqrt(2)])
+    elseif j == 14; return Vec{2}([2*sqrt(30)*(84*s^3 - 84*s^2 + 21*s - 1),
+                            r*(504*sqrt(30)*s^2 - 336*sqrt(30)*s + 42*sqrt(30)) + 336*sqrt(30)*s^3 - 504*sqrt(30)*s^2 + 210*sqrt(30)*s - 22*sqrt(30)])
+    elseif j == 15; return Vec{2}([zero(T),504*sqrt(10)*s^3 - 672*sqrt(10)*s^2 + 252*sqrt(10)*s - 24*sqrt(10)])
     else; return ∇dubiner_basis(r,s,j)
     end
 end
@@ -226,7 +226,7 @@ function ∇dubiner_basis(x,y,j::Integer)
     n=Int(((ceil(t)+1)*(ceil(t)+2))/2-j)
     m=Int(ceil(t)-n)
     #Compute ∇Dubiner_nm(ξ, η)
-    return ∇dubiner(x,y,n,m)
+    return Vec{2}(∇dubiner(x,y,n,m))
 end
 
 ####################

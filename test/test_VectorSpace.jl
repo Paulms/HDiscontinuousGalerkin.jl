@@ -7,7 +7,7 @@ mesh = parse_mesh_triangle(root_file)
 # ### Trial and test functions
 dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-@test sum(Vh.detJdV) ≈ 1.0
+@test sum(Vh.ssp.detJdV) ≈ 1.0
 
 # Integral u⋅v dΩ
 n_basefuncs = 6

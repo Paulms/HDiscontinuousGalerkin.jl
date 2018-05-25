@@ -1,24 +1,24 @@
-# VectorFunctionSpace
-struct VectorFunctionSpace{dim,T<:Real,refshape<:AbstractRefShape,M} <: DiscreteFunctionSpace{dim,T,refshape}
-    N::Matrix{Vec{dim,T}}
-    dNdξ::Matrix{Tensor{2,dim,T,M}}
+#ScalarFunctionSpace
+struct ScalarFunctionSpace{dim,T<:Real,refshape<:AbstractRefShape,M} <: DiscreteFunctionSpace{dim,T,refshape}
+    N::Matrix{T}
+    dNdξ::Matrix{Vec{dim,T}}
     detJdV::Matrix{T}
     Jinv::Matrix{Tensor{2,dim,T,M}}
     M::Matrix{T}
     qr_weights::Vector{T}
 end
 
-getnquadpoints(fs::VectorFunctionSpace) = length(fs.qr_weights)
-getdetJdV(fs::VectorFunctionSpace, cell::Int, q_point::Int) = fs.detJdV[cell,q_point]
-@inline shape_value(fs::VectorFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
+getnquadpoints(fs::ScalarFunctionSpace) = length(fs.qr_weights)
+getdetJdV(fs::ScalarFunctionSpace, cell::Int, q_point::Int) = fs.detJdV[cell,q_point]
+@inline shape_value(fs::ScalarFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
 
-function VectorFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
+function ScalarFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
     quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}
     quad_rule = QuadratureRule{dim,shape}(DefaultQuad(), quad_degree)
-    VectorFunctionSpace(Float64, mesh, quad_rule, func_interpol, geom_interpol)
+    ScalarFunctionSpace(Float64, mesh, quad_rule, func_interpol, geom_interpol)
 end
 
-function VectorFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::QuadratureRule{dim,shape}, func_interpol::Interpolation,
+function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::QuadratureRule{dim,shape}, func_interpol::Interpolation,
         geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim,T,shape<:AbstractRefShape}
 
     @assert getdim(func_interpol) == getdim(geom_interpol)
@@ -27,9 +27,9 @@ function VectorFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::Quadratu
     n_cells = numcells(mesh)
 
     # Function interpolation
-    n_func_basefuncs = getnbasefunctions(func_interpol) * dim
-    N    = fill(zero(Vec{dim,T})      * T(NaN), n_func_basefuncs, n_qpoints)
-    dNdξ = fill(zero(Tensor{2,dim,T}) * T(NaN), n_func_basefuncs, n_qpoints)
+    n_func_basefuncs = getnbasefunctions(func_interpol)
+    N    = fill(zero(T)          * T(NaN), n_func_basefuncs, n_qpoints)
+    dNdξ = fill(zero(Vec{dim,T}) * T(NaN), n_func_basefuncs, n_qpoints)
 
     # Geometry interpolation
     n_geom_basefuncs = getnbasefunctions(geom_interpol)
@@ -37,23 +37,12 @@ function VectorFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::Quadratu
     dMdξ = fill(zero(Vec{dim,T}) * T(NaN), n_geom_basefuncs, n_qpoints)
 
     for (qp, ξ) in enumerate(quad_rule.points)
-        basefunc_count = 1
-        for basefunc in 1:getnbasefunctions(func_interpol)
-            dNdξ_temp = gradient_value(func_interpol, basefunc, ξ)
-            N_temp = value(func_interpol, basefunc, ξ)
-            for comp in 1:dim
-                N_comp = zeros(T, dim)
-                N_comp[comp] = N_temp
-                N[basefunc_count, qp] = Vec{dim,T}((N_comp...))
-
-                dN_comp = zeros(T, dim, dim)
-                dN_comp[comp, :] = dNdξ_temp
-                dNdξ[basefunc_count, qp] = Tensor{2,dim,T}((dN_comp...))
-                basefunc_count += 1
-            end
+        for i in 1:n_func_basefuncs
+            dNdξ[i, qp] = gradient_value(func_interpol, i, ξ)
+            N[i, qp] = value(func_interpol, i, ξ)
         end
-        for basefunc in 1:n_geom_basefuncs
-            dMdξ[basefunc, qp], M[basefunc, qp] = gradient(ξ -> value(geom_interpol, basefunc, ξ), ξ, :all)
+        for i in 1:n_geom_basefuncs
+            dMdξ[i, qp], M[i, qp] = gradient(ξ -> value(geom_interpol, i, ξ), ξ, :all)
         end
     end
 
@@ -75,6 +64,31 @@ function VectorFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::Quadratu
             Jinv[k,i] = inv(fecv_J)
         end
     end
-    MM = Tensors.n_components(Tensors.get_base(eltype(dNdξ)))
-    VectorFunctionSpace{dim,T,shape,MM}(N, dNdξ, detJdV, Jinv, M, quad_rule.weights)
+    MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
+    ScalarFunctionSpace{dim,T,shape,MM}(N, dNdξ, detJdV, Jinv, M, quad_rule.weights)
+end
+
+# VectorFunctionSpace
+struct VectorFunctionSpace{dim,T<:Real,refshape<:AbstractRefShape,M,NN <:Int} <: DiscreteFunctionSpace{dim,T,refshape}
+    n_dof::NN
+    ssp::ScalarFunctionSpace{dim,T,refshape,M}
+end
+
+getnquadpoints(fs::VectorFunctionSpace) = length(fs.ssp.qr_weights)
+getdetJdV(fs::VectorFunctionSpace, cell::Int, q_point::Int) = fs.ssp.detJdV[cell,q_point]
+function shape_value(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func::Int) where {dim,T}
+    @assert 1 <= base_func <= fs.n_dof "invalid base function index: $base_func"
+    N_comp = zeros(T, dim)
+    n = size(fs.ssp.N,1)
+    N_comp[div(base_func,n+1)+1] = fs.ssp.N[mod1(base_func,n),q_point]
+    return N_comp
+end
+
+function VectorFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
+    quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}
+    quad_rule = QuadratureRule{dim,shape}(DefaultQuad(), quad_degree)
+    ssp = ScalarFunctionSpace(Float64, mesh, quad_rule, func_interpol, geom_interpol)
+    n_func_basefuncs = getnbasefunctions(func_interpol)
+    dof = n_func_basefuncs*dim
+    VectorFunctionSpace(dof,ssp)
 end
