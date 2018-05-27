@@ -40,12 +40,14 @@ export dubiner_basis, ∇dubiner_basis
 export value, derivative, gradient_value
 export getnbasefunctions
 export get_default_geom_interpolator
+export getorder
 
 #utils
 export get_affine_map, integrate
 
 #FunctionSpaces
-export VectorFunctionSpace
+export VectorFunctionSpace, ScalarFunctionSpace
 export getnquadpoints, getdetJdV, shape_value
+export shape_gradient, shape_divergence
 
 end # module
