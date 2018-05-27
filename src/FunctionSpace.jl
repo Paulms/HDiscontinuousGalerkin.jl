@@ -2,6 +2,7 @@
 struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,M} <: DiscreteFunctionSpace{dim,T,refshape}
     N::Matrix{T}
     dNdξ::Matrix{Vec{dim,T}}
+    E :: Matrix{Vector{T}}
     detJ::Matrix{T}
     detJf::Vector{Matrix{T}}
     Jinv::Matrix{Tensor{2,dim,T,M}}
@@ -10,11 +11,14 @@ struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,M} <: Discr
     qr_face_weights::Vector{T}
 end
 
-getnquadpoints(fs::ScalarFunctionSpace) = length(fs.qr_weights)
-getnfacequadpoints(fs::ScalarFunctionSpace) = length(fs.qr_face_weights)
-getdetJdV(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell,q_point]*fs.qr_weights[q_point]
-getdetJdV(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell]*fs.qr_weights[q_point]
+@inline getnquadpoints(fs::ScalarFunctionSpace) = length(fs.qr_weights)
+@inline getnfacequadpoints(fs::ScalarFunctionSpace) = length(fs.qr_face_weights)
+@inline getdetJdV(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell,q_point]*fs.qr_weights[q_point]
+@inline getdetJdV(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell]*fs.qr_weights[q_point]
+@inline getdetJfdS(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJf[cell][face, q_point]*fs.qr_face_weights[q_point]
+@inline getdetJfdS(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJf[cell][face]*fs.qr_face_weights[q_point]
 @inline shape_value(fs::ScalarFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
+@inline face_shape_value(fs::ScalarFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.E[base_func, q_point][face]
 @inline shape_gradient(fs::ScalarFunctionSpace{dim,T,2}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point]
 @inline shape_gradient(fs::ScalarFunctionSpace{dim,T,1}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell]
 @inline shape_divergence(fs::ScalarFunctionSpace{dim,T,2}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = sum(fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point])
@@ -48,6 +52,9 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::Quadratu
     N    = fill(zero(T)          * T(NaN), n_func_basefuncs, n_qpoints)
     dNdξ = fill(zero(Vec{dim,T}) * T(NaN), n_func_basefuncs, n_qpoints)
 
+    # Face interpolation
+    E    = fill(zeros(T,n_faces) * T(NaN), n_func_basefuncs, n_faceqpoints)
+
     # Geometry interpolation
     n_geom_basefuncs = getnbasefunctions(geom_interpol)
     M    = fill(zero(T)          * T(NaN), n_geom_basefuncs, n_qpoints)
@@ -66,7 +73,21 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::Quadratu
             dMdξ[i, qp], M[i, qp] = gradient(ξ -> value(geom_interpol, i, ξ), ξ, :all)
         end
     end
+    face_coords = reference_edges(shape(), Val{dim})
     for (qp, ξ) in enumerate(face_quad_rule.points)
+        for i in 1:n_func_basefuncs
+            E_f = zeros(T, n_faces)
+            for j in 1:n_faces  # TODO: Here I assume all cells have the same number of faces
+                #Map from reference dim-1 shape to reference dim shape face/edge
+                η = zero(Vec{2,T})
+                for (k,x) in enumerate(face_coords[j])
+                    η += value(geom_face_interpol, k, ξ)*x
+                end
+                #Evaluate shape function on q_point map to edge j
+                E_f[j] = value(func_interpol, i, η)
+            end
+            E[i, qp] = E_f
+        end
         for i in 1:n_geom_face_basefuncs
             dLdξ[i, qp] = gradient(ξ -> value(geom_face_interpol, i, ξ), ξ)
         end
@@ -99,13 +120,12 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, quad_rule::Quadratu
                 #for line integral
                 detJ_f = norm(fef_J)
                 detJf_c[l, i] = detJ_f
-                #Jinv[k,i] = inv(fecv_J)
             end
         end
         detJf[k] = detJf_c
     end
     MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
-    ScalarFunctionSpace{dim,T,NN,shape,MM}(N, dNdξ, detJ, detJf, Jinv, M, quad_rule.weights, face_quad_rule.weights)
+    ScalarFunctionSpace{dim,T,NN,shape,MM}(N, dNdξ, E, detJ, detJf, Jinv, M, quad_rule.weights, face_quad_rule.weights)
 end
 
 # VectorFunctionSpace

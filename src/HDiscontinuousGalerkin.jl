@@ -49,6 +49,7 @@ export get_affine_map, integrate
 export VectorFunctionSpace, ScalarFunctionSpace
 export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
-export getnfacequadpoints
+export getnfacequadpoints, getdetJfdS
+export face_shape_value
 
 end # module
