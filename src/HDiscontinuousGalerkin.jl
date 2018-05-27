@@ -23,7 +23,7 @@ include("FunctionSpace.jl")
 export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
-export numcells
+export numcells, numfaces, get_maxnfaces
 
 # Shapes
 export get_nodal_points, volume
@@ -40,7 +40,7 @@ export dubiner_basis, ∇dubiner_basis
 export value, derivative, gradient_value
 export getnbasefunctions
 export get_default_geom_interpolator
-export getorder
+export getorder, getlowerdiminterpol
 
 #utils
 export get_affine_map, integrate
@@ -49,5 +49,6 @@ export get_affine_map, integrate
 export VectorFunctionSpace, ScalarFunctionSpace
 export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
+export getnfacequadpoints
 
 end # module

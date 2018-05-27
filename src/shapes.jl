@@ -1,7 +1,7 @@
 struct RefTetrahedron <: AbstractRefShape end
 
 function reference_coordinates(::RefTetrahedron, ::Type{Val{1}})
-    return [-1.0,1.0]
+    return [Vec{1, Float64}((-1.0,)),Vec{1, Float64}((1.0,))]
 end
 function reference_coordinates(::RefTetrahedron, ::Type{Val{2}})
     [Vec{2, Float64}((0.0, 0.0)),

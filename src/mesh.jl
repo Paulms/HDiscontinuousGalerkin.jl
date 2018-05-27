@@ -21,6 +21,7 @@ struct Cell{T <: Int,N,T2}
     orientation::Vector{Bool}
     normals::Vector{Vec{N,T2}}
 end
+@inline numfaces(cell::Cell) = length(cell.faces)
 
 struct Face{T <: Int}
     cells::Vector{T}
@@ -32,13 +33,22 @@ struct PolygonalMesh{dims,Type} <: AbstractPolygonalMesh
     nodes::Vector{Node{dims,Type}}
     faces::Vector{Face}
 end
-get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
-get_cells(mesh::PolygonalMesh) = mesh.cells
-get_nodes(mesh::PolygonalMesh) = mesh.nodes
-get_faces(mesh::PolygonalMesh) = mesh.faces
-node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
-node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
-ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
+function get_maxnfaces(mesh::PolygonalMesh)
+    nmax = 0
+    for cell in mesh.cells
+        nmax = max(nmax, numfaces(cell))
+    end
+    nmax
+end
+@inline get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
+@inline get_coordinates(face::Face, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in face.nodes]
+@inline get_cells(mesh::PolygonalMesh) = mesh.cells
+@inline get_nodes(mesh::PolygonalMesh) = mesh.nodes
+@inline get_faces(mesh::PolygonalMesh) = mesh.faces
+@inline get_faces(cell::Cell, mesh::PolygonalMesh) = [mesh.faces[i] for i in cell.faces]
+@inline node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
+@inline node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
+@inline ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
 @inline numcells(mesh::PolygonalMesh) = length(mesh.cells)
 
 nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]

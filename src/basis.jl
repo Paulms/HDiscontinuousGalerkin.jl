@@ -41,7 +41,7 @@ function get_default_geom_interpolator(dim, shape)
     if dim == 2
         return Lagrange{dim,shape,1}()
     end
-    return Legendre{dim,shape,1}()
+    return Lagrange{dim,shape,1}()
 end
 ############
 # Dubiner #
@@ -260,6 +260,11 @@ getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
 getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
 
 """
+return interpolator of the same type with dim = dim -1
+"""
+@inline getlowerdiminterpol(ip::Lagrange{dim,shape,order}) where {dim,shape,order} = Lagrange{dim-1,shape,order}()
+
+"""
 value(ip::Lagrange{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
 Compute value of Lagrange basis `j` at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
@@ -281,7 +286,7 @@ gradient_value(ip::Lagrange{2,RefTetrahedron,order}, j::Int, ξ::AbstactVector) 
 Compute value of Lagrange basis `j` derivative at point ξ
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-function gradient_value(ip::Lagrange{dim,RefTetrahedron,order}, k::Int, ξ::Vec{2,T}) where {dim,order,T}
+function gradient_value(ip::Lagrange{dim,RefTetrahedron,order}, k::Int, ξ::Vec{dim,T}) where {dim,order,T}
     if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
     # a = nodal_basis_coefs[1,k]*gradient_value(interpolation, 1, ξ)
     # n = getnbasefunctions(ip)
@@ -306,7 +311,7 @@ on the reference line (-1,1)
 """
 function value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
     if k > getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
-    return sqrt((2*k+1)/2)*jacobi(ξ[1],k,0.0,0.0)
+    return sqrt((2*(k-1)+1)/2)*jacobi(ξ[1],k-1,0.0,0.0)
 end
 
 """

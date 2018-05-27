@@ -33,10 +33,23 @@ function ref_value(i::Int, ξ::Vec{2})
 end
 
 interpolation = Lagrange{2,RefTetrahedron,1}()
-const ξ_ref = Vec{2}((0.5,0.5))
+ξ_ref = Vec{2}((0.5,0.5))
 for j = 1:3
     @test abs(ref_value(j,ξ_ref) - value(interpolation,j,ξ_ref)) < eps(Float64)
     @test norm(gradient(ξ -> ref_value(j, ξ), ξ_ref) - gradient_value(interpolation,j,ξ_ref), Inf) < eps(Float64)
+end
+
+function ref_value1(i::Int, ξ::Vec{1})
+    ξ_x = ξ[1]
+    i == 1 && return 0.5*(1-ξ_x)
+    i == 2 && return 0.5*(1+ξ_x)
+    throw(ArgumentError("no shape function $i for interpolation $ip"))
+end
+ξ_ref = Vec{1}((0.5,))
+interpolation = Lagrange{1,RefTetrahedron,1}()
+for j = 1:2
+    @test abs(ref_value1(j,ξ_ref) - value(interpolation,j,ξ_ref)) < eps(Float64)
+    @test norm(gradient(ξ -> ref_value1(j, ξ), ξ_ref) - gradient_value(interpolation,j,ξ_ref), Inf) < eps(Float64)
 end
 
 #Test Legendre basis
@@ -66,8 +79,8 @@ function ref_dvalue(i::Int, x::Real)
 end
 
 interpolation = Legendre{1,RefTetrahedron,3}()
-quad_rule = QuadratureRule{1,RefTetrahedron}(GaussLegendre(),4)
+quad_rule = QuadratureRule{1,RefTetrahedron}(GaussLegendre(),3)
 for i = 0:3
-    @test integrate(x->(ref_value(i,x[1]) - value(interpolation, i, x))^2,quad_rule) < eps()
-    @test integrate(x->(ref_dvalue(i,x[1]) - gradient_value(interpolation, i, x))^2,quad_rule) < eps()
+    @test integrate(x->(ref_value(i,x[1]) - value(interpolation, i+1, x))^2,quad_rule) < eps()
+    @test integrate(x->(ref_dvalue(i,x[1]) - gradient_value(interpolation, i+1, x))^2,quad_rule) < eps()
 end
