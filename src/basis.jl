@@ -332,5 +332,5 @@ function gradient_value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,
     #     end
     # end
     # return 2*sqrt(2*k+1)*J
-    gradient(ξ -> value(ip, k, ξ), ξ)[1]
+    gradient(ξ -> value(ip, k, ξ), ξ)
 end

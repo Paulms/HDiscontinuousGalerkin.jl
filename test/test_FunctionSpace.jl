@@ -9,6 +9,7 @@ mesh = parse_mesh_triangle(root_file)
 dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
+Mh = ScalarTraceFunctionSpace(mesh, Legendre{dim-1,RefTetrahedron,1}())
 # Basic Test
 @test sum(Vh.ssp.detJ) ≈ 2.0
 for i in 1:4
@@ -40,6 +41,7 @@ Se_ex[4] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Me = zeros(n_basefuncs, n_basefuncs)
 Ce = zeros(n_basefuncs, n_basefuncs_s)
 Se = zeros(n_basefuncs_s, n_basefuncs_s)
+#Ee_l = Vector{Matrix{Float64}}(3)
 
 for cell_idx in 1:numcells(mesh)
     fill!(Me, 0)

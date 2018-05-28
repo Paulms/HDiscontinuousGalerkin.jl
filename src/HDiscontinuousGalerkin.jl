@@ -46,7 +46,7 @@ export getorder, getlowerdiminterpol
 export get_affine_map, integrate
 
 #FunctionSpaces
-export VectorFunctionSpace, ScalarFunctionSpace
+export VectorFunctionSpace, ScalarFunctionSpace, ScalarTraceFunctionSpace
 export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJfdS

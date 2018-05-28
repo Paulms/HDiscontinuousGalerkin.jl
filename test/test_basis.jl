@@ -82,5 +82,5 @@ interpolation = Legendre{1,RefTetrahedron,3}()
 quad_rule = QuadratureRule{1,RefTetrahedron}(GaussLegendre(),3)
 for i = 0:3
     @test integrate(x->(ref_value(i,x[1]) - value(interpolation, i+1, x))^2,quad_rule) < eps()
-    @test integrate(x->(ref_dvalue(i,x[1]) - gradient_value(interpolation, i+1, x))^2,quad_rule) < eps()
+    @test integrate(x->(ref_dvalue(i,x[1]) - gradient_value(interpolation, i+1, x)[1])^2,quad_rule) < eps()
 end
