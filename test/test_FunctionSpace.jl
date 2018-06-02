@@ -21,10 +21,10 @@ end
 @test Wh.Jinv[4,1] ≈ Tensor{2,2}([1.0 -1.0;0.0 2.0])
 
 const sq2 = sqrt(2)
-@test Wh.detJf[1] ≈ [1/2,sq2/4,sq2/4]
-@test Wh.detJf[2] ≈ [1/2,sq2/4,sq2/4]
-@test Wh.detJf[3] ≈ [sq2/4,1/2,sq2/4]
-@test Wh.detJf[4] ≈ [1/2,sq2/4,sq2/4]
+@test Wh.detJf[1] ≈ [sq2/4,sq2/4,1/2]
+@test Wh.detJf[2] ≈ [sq2/4,sq2/4,1/2]
+@test Wh.detJf[3] ≈ [1/2,sq2/4,sq2/4]
+@test Wh.detJf[4] ≈ [sq2/4,sq2/4,1/2]
 
 n_basefuncs = 6 #vectorial base
 n_basefuncs_s = 3 #scalar

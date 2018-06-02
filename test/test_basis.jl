@@ -17,9 +17,9 @@ end
 @test get_nodal_points(RefTetrahedron(), Val{2}, 2) == [Vec{2, Float64}((0.0, 0.0)),
                                             Vec{2, Float64}((1.0, 0.0)),
                                             Vec{2, Float64}((0.0, 1.0)),
-                                            Vec{2, Float64}((0.5, 0.0)),
                                             Vec{2, Float64}((0.5, 0.5)),
-                                            Vec{2, Float64}((0.0, 0.5))]
+                                            Vec{2, Float64}((0.0, 0.5)),
+                                            Vec{2, Float64}((0.5, 0.0))]
 @test length(get_nodal_points(RefTetrahedron(), Val{2}, 3)) == 10
 @test get_nodal_points(RefTetrahedron(), Val{2}, 3)[10] ≈ Vec{2, Float64}((1/3, 1/3))
 # Test Lagrange base

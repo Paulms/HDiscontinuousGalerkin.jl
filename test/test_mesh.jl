@@ -1,6 +1,6 @@
 using HDiscontinuousGalerkin
 using Tensors
-root_file = "mesh/figura.2"
+root_file = "mesh/figure2.1"
 mesh = parse_mesh_triangle(root_file)
 
 # General checks
@@ -13,4 +13,4 @@ end
 @test mesh.cells[1].faces == [1,2,3]
 @test mesh.cells[1].orientation == [true,false,true]
 @test mesh.cells[1].normals ≈ [Vec{2}([-sqrt(2)/2,sqrt(2)/2]), Vec{2}([-sqrt(2)/2,-sqrt(2)/2]), Vec{2}([1.0,0.0])]
-@test cell_diameter(mesh,1) == sqrt(2)
+@test cell_diameter(mesh,1) == 1.0

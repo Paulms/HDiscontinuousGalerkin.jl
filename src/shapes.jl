@@ -10,9 +10,9 @@ function reference_coordinates(::RefTetrahedron, ::Type{Val{2}})
 end
 
 function reference_edges(::RefTetrahedron,::Type{Val{2}})
-    [[Vec{2, Float64}((0.0, 0.0)),Vec{2, Float64}((1.0, 0.0))],
-     [Vec{2, Float64}((1.0, 0.0)),Vec{2, Float64}((0.0, 1.0))],
-     [Vec{2, Float64}((0.0, 1.0)),Vec{2, Float64}((0.0, 0.0))]]
+    [[Vec{2, Float64}((1.0, 0.0)),Vec{2, Float64}((0.0, 1.0))],
+     [Vec{2, Float64}((0.0, 1.0)),Vec{2, Float64}((0.0, 0.0))],
+     [Vec{2, Float64}((0.0, 0.0)),Vec{2, Float64}((1.0, 0.0))]]
 
 end
 
