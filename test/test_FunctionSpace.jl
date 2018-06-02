@@ -9,7 +9,7 @@ mesh = parse_mesh_triangle(root_file)
 dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Mh = ScalarTraceFunctionSpace(mesh, Legendre{dim-1,RefTetrahedron,1}())
+Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 # Basic Test
 @test sum(Vh.ssp.detJ) ≈ 2.0
 for i in 1:4
@@ -41,7 +41,7 @@ Se_ex[4] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Me = zeros(n_basefuncs, n_basefuncs)
 Ce = zeros(n_basefuncs, n_basefuncs_s)
 Se = zeros(n_basefuncs_s, n_basefuncs_s)
-#Ee_l = Vector{Matrix{Float64}}(3)
+Ee = zeros(3*n_basefuncs_s,n_basefuncs)
 
 for cell_idx in 1:numcells(mesh)
     fill!(Me, 0)
@@ -68,7 +68,7 @@ for cell_idx in 1:numcells(mesh)
     #Face integrals
     for face_idx in 1:numfaces(mesh.cells[cell_idx])
         for q_point in 1:getnfacequadpoints(Wh)
-            dS = getdetJfdS(Wh, cell_idx, face_idx, q_point)
+            dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
             for i in 1:n_basefuncs_s
                 w = face_shape_value(Wh, face_idx, q_point, i)
                 for j in 1:n_basefuncs_s
@@ -82,4 +82,19 @@ for cell_idx in 1:numcells(mesh)
     @test Me ≈ 0.5*one(Me)
     @test Ce ≈ Ce_ex[cell_idx]
     @test Se ≈ Se_ex[cell_idx]
+    # Third equation matrices
+    for face_idx in 1:numfaces(mesh.cells[cell_idx])
+        for q_point in 1:getnfacequadpoints(Wh)
+            dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
+            for i in 1:n_basefuncs_s
+                w = shape_value(Wh, q_point, i)
+                for j in 1:n_basefuncs
+                    u = face_shape_value(Vh, face_idx, q_point, j)
+                    n = get_normal(mesh.cells[cell_idx], face_idx)
+                    # Integral_∂T u ⋅ w dS
+                    Ee[n_basefuncs_s*(face_idx-1)+i,j] += (w*(u⋅n)) * dS
+                end
+            end
+        end
+    end
 end

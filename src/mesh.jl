@@ -22,6 +22,7 @@ struct Cell{T <: Int,N,T2}
     normals::Vector{Vec{N,T2}}
 end
 @inline numfaces(cell::Cell) = length(cell.faces)
+@inline get_normal(cell::Cell, face::Int) = cell.normals[face]
 
 struct Face{T <: Int}
     cells::Vector{T}
@@ -92,31 +93,12 @@ function parse_nodes!(nodes,root_file)
     end
 end
 
-function parse_faces!(faces,root_file)
-    open(root_file*".edge") do f
-        first_line = true
-        for ln in eachline(f)
-            m = match(r"^\s*(?:#|$)", ln)
-            if m == nothing
-                if (first_line)   #skip first line
-                    first_line = false
-                else
-                    #parse nodes
-                    pln = collect(read_line(ln, (Int,Int,Int,Int)))
-                    face = Face(Vector{Int}(),pln[2:3],pln[4])
-                    push!(faces, face)
-                end
-            end
-        end
-    end
-end
-
-function parse_cells!(cells,faces,root_file)
-    all_nodes = Vector{Vector{Node}}()
+function parse_cells!(cells, faces, nodes, root_file)
     #read cell nodes
     open(root_file*".ele") do f
         first_line = true
         n_el = 0
+        n_faces = 0
         for ln in eachline(f)
             m = match(r"^\s*(?:#|$)", ln)
             if m == nothing
@@ -128,20 +110,47 @@ function parse_cells!(cells,faces,root_file)
                     pln = collect(read_line(ln, (Int,Int,Int,Int)))
                     el_nodes = pln[2:4]
                     el_faces = [-1,-1,-1]
-                    #look for faces
-                    for (i,c_face) in enumerate([el_nodes[1:2],el_nodes[2:3],
-                        [el_nodes[3],el_nodes[1]]])
+                    #build faces
+                    for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
+                        c_face = [el_nodes[fn_id[1]],el_nodes[fn_id[2]]]
+                        face_found = false
                         for (j,face) in enumerate(faces)
                             if sort(face.nodes) == sort(c_face)
                                 el_faces[i] = j
                                 if !(n_el in face.cells)
                                     push!(face.cells,n_el)
                                 end
+                                face_found = true
                             end
+                        end
+                        if !face_found
+                            ref = (nodes[c_face[1]].ref == 1 && nodes[c_face[2]].ref == 1) ? 1 : 0
+                            face = Face([n_el],c_face,ref)
+                            push!(faces, face)
+                            n_faces = n_faces + 1
+                            el_faces[i] = n_faces
                         end
                     end
                     orientation = [true,true,true]
                     normals = fill(zero(Vec{2,Float64}) * Float64(NaN), 3)
+                    #check consistent cells orientation and compute normals
+                    coords = [nodes[j].x for j in el_nodes]
+                    a = coords[2]-coords[1]
+                    b = coords[3]-coords[1]
+                    if (a[1]*b[2]-a[2]*b[1]) < 0
+                        #swap vertices 2 and 3
+                        el_nodes[2],el_nodes[3] = el_nodes[3],el_nodes[2]
+                        el_faces = reverse(el_faces)
+                    end
+                    #Compute normals
+                    for (i,k) in enumerate(((2,3),(3,1),(1,2)))
+                        v1 =  coords[k[2]] - coords[k[1]]
+                        n1 = Vec{2}([v1[2], -v1[1]])
+                        normals[i] = n1/norm(n1)
+                        #Compute faces orientation
+                        #Just to standarize jump definitions
+                        orientation[i] = el_nodes[k[2]] > el_nodes[k[1]]
+                    end
                     #save cell
                     cell = Cell(el_nodes, el_faces, orientation, normals)
                     push!(cells, cell)
@@ -161,27 +170,6 @@ function parse_mesh_triangle(root_file)
     faces = Vector{Face}()
     cells = Vector{Cell}()
     parse_nodes!(nodes,root_file)
-    parse_faces!(faces,root_file)
-    parse_cells!(cells, faces, root_file)
-    #check consistent cells orientation and compute normals
-    for cell in cells
-        coords = [nodes[j].x for j in cell.nodes]
-        a = coords[2]-coords[1]
-        b = coords[3]-coords[1]
-        if (a[1]*b[2]-a[2]*b[1]) < 0
-            #swap vertices 2 and 3
-            cell.nodes[2],cell.nodes[3] = cell.nodes[3],cell.nodes[2]
-            cell.faces = reverse(cell.faces)
-        end
-        #Compute normals
-        for (i,k) in enumerate(((1,2),(2,3),(3,1)))
-            v1 =  coords[k[2]] - coords[k[1]]
-            n1 = Vec{2}([v1[2], -v1[1]])
-            cell.normals[i] = n1/norm(n1)
-            #Compute faces orientation
-            #Just to standarize jump definitions
-            cell.orientation[i] = cell.nodes[k[2]] > cell.nodes[k[1]]
-        end
-    end
+    parse_cells!(cells, faces, nodes, root_file)
     PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, faces)
 end
