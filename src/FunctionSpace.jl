@@ -16,10 +16,10 @@ end
 @inline getnfacequadpoints(fs::ScalarFunctionSpace) = length(getpoints(fs.qr_face))
 @inline getdetJdV(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell,q_point]*fs.qr_weights[q_point]
 @inline getdetJdV(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell]*fs.qr_weights[q_point]
-@inline getdetJdS(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJf[cell][face, q_point]*fs.qr_face_weights[q_point]
+@inline getdetJdS(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJf[cell][face, q_point]*getweights(fs.qr_face)[q_point]
 @inline getdetJdS(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJf[cell][face]*getweights(fs.qr_face)[q_point]
 @inline shape_value(fs::ScalarFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
-@inline face_shape_value(fs::ScalarFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.E[base_func, q_point][face]
+@inline face_shape_value(fs::ScalarFunctionSpace, face::Int, q_point::Int, base_func::Int, orientation::Bool = true) = orientation ? fs.E[base_func, q_point][face] : fs.E[base_func, end - q_point+1][face]
 @inline shape_gradient(fs::ScalarFunctionSpace{dim,T,2}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point]
 @inline shape_gradient(fs::ScalarFunctionSpace{dim,T,1}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell]
 @inline shape_divergence(fs::ScalarFunctionSpace{dim,T,2}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = sum(fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point])
@@ -148,11 +148,12 @@ function shape_value(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func::In
     return N_comp
 end
 
-function face_shape_value(fs::VectorFunctionSpace{dim,T}, face::Int, q_point::Int, base_func::Int) where {dim, T}
+function face_shape_value(fs::VectorFunctionSpace{dim,T}, face::Int, q_point::Int, base_func::Int, orientation::Bool=true) where {dim, T}
     @assert 1 <= base_func <= fs.n_dof "invalid base function index: $base_func"
     N_comp = zeros(T, dim)
     n = size(fs.ssp.N,1)
-    N_comp[div(base_func,n+1)+1] = fs.ssp.E[mod1(base_func,n), q_point][face]
+    q_p = orientation ? q_point : getnfacequadpoints(fs.ssp)-q_point + 1
+    N_comp[div(base_func,n+1)+1] = fs.ssp.E[mod1(base_func,n), q_p][face]
     return N_comp
 end
 
@@ -197,8 +198,8 @@ end
 
 @inline getnbasefunctions(fs::ScalarTraceFunctionSpace) = length(fs.N)
 @inline getnquadpoints(fs::ScalarTraceFunctionSpace) = length(fs.qr_weights)
-@inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,2}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell,q_point]*fs.qr_weights[q_point]
-@inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,1}, cell::Int, q_point::Int) where {dim,T} = fs.detJ[cell]*fs.qr_weights[q_point]
+@inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,2}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJ[cell,q_point][face]*fs.qr_weights[q_point]
+@inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,1}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJ[cell][face]*fs.qr_weights[q_point]
 @inline shape_value(fs::ScalarTraceFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
 
 function ScalarTraceFunctionSpace(psp::ScalarFunctionSpace{dim,T,N,refshape,order,M},

@@ -23,6 +23,7 @@ struct Cell{T <: Int,N,T2}
 end
 @inline numfaces(cell::Cell) = length(cell.faces)
 @inline get_normal(cell::Cell, face::Int) = cell.normals[face]
+@inline face_orientation(cell::Cell, face::Int) = cell.orientation[face]
 
 struct Face{T <: Int}
     cells::Vector{T}

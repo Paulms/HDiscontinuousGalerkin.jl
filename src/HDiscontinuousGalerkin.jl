@@ -24,6 +24,7 @@ export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
 export numcells, numfaces, get_maxnfaces, get_normal
+export face_orientation
 
 # Shapes
 export get_nodal_points, volume
