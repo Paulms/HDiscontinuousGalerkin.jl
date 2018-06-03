@@ -41,7 +41,7 @@ end
 """
 Face Quadrature Rules
 """
-function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interpolation{2,shape}) where {T,shape<:RefTetrahedron}
+function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interpolation{2,shape}) where {T,shape}
     w = getweights(quad_rule)
     p = getpoints(quad_rule)
     n_points = length(w)
@@ -50,7 +50,7 @@ function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interp
     geom_face_interpol = get_default_geom_interpolator(1, shape)
     face_coords = reference_edges(shape(), Val{2})
 
-    for j = 1:3
+    for j = 1:get_num_faces(shape(), Val{2})
         new_points = Vec{2,T}[]
         for (qp, ξ) in enumerate(p)
             #Map from reference dim-1 shape to reference dim shape face/edge

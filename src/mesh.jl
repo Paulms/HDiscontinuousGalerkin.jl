@@ -13,7 +13,7 @@ Node(x::NTuple{dim,T}, ref::Int) where {dim,T} = Node(Vec{dim,T}(x), ref)
 get_coords(node::Node) = node.x
 get coordinates of a node
 """
-get_coordinates(node::Node) = node.x
+@inline get_coordinates(node::Node) = node.x
 
 struct Cell{T <: Int,N,T2}
     nodes::Vector{T}
@@ -53,10 +53,10 @@ end
 @inline ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
 @inline numcells(mesh::PolygonalMesh) = length(mesh.cells)
 
-nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
-nodes(face::Face, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in face.nodes]
-faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
-cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in face.cells]
+@inline nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
+@inline nodes(face::Face, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in face.nodes]
+@inline faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
+@inline cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in face.cells]
 
 function cell_diameter(mesh::PolygonalMesh{N,T}, idx::Int) where {N,T}
     K = get_cells(mesh)[idx]

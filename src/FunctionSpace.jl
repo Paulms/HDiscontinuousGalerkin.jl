@@ -35,8 +35,8 @@ end
 Return the normal at the quadrature point `qp` for the face `face` at
 cell `cell` of the `ScalarFunctionSpace` object.
 """
-getnormal(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, qp::Int) where {dim,T} = fs.normals[qp, cell, face, qp]
-getnormal(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int) where {dim,T} = fs.normals[qp, cell, face]
+@inline get_normal(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, qp::Int) where {dim,T} = fs.normals[qp, cell, face, qp]
+@inline get_normal(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int) where {dim,T} = fs.normals[qp, cell, face]
 
 function ScalarFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
     quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}

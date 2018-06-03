@@ -1,4 +1,5 @@
 struct RefTetrahedron <: AbstractRefShape end
+@inline get_num_faces(::RefTetrahedron, ::Type{Val{dim}}) where {dim} = dim + 1
 
 function reference_coordinates(::RefTetrahedron, ::Type{Val{1}})
     return [Vec{1, Float64}((0.0,)),Vec{1, Float64}((1.0,))]
