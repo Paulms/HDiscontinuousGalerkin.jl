@@ -52,5 +52,6 @@ export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJdS
 export face_shape_value
+export InterpolatedFunction, function_value, interpolate
 
 end # module

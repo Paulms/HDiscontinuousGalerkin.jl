@@ -30,12 +30,11 @@ using Tensors
 root_file = "mesh/figure2.1"
 mesh = parse_mesh_triangle(root_file)
 
-# ### Trial and test functions
+# ### Initiate function Spaces
 dim = 2
-
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Mh = ScalarFunctionSpace(mesh, Legendre{dim-1,RefTetrahedron,1}())
+Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
 # dh = DofHandler(mesh)
 # push!(dh, :u, Wh)
@@ -51,12 +50,23 @@ Mh = ScalarFunctionSpace(mesh, Legendre{dim-1,RefTetrahedron,1}())
 # close!(ch)
 # update!(ch, 0.0);
 
+# RHS function
+f(x::Vec{dim}) = 1
+ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
 # Now we have all the pieces needed to assemble the linear system, $K u = f$.
 #function doassemble(dh::DofHandler)
     # Allocate Matrices
-    n_basefuncs = 6 #getnbasefunctions(dh, :sigma)
+    τ = 1
+    n_basefuncs = getnbasefunctions(Vh)
+    n_basefuncs_s = getnbasefunctions(Wh)
+    n_basefuncs_t = getnbasefunctions(Mh)
     Me = zeros(n_basefuncs, n_basefuncs)
+    Ce = zeros(n_basefuncs, n_basefuncs_s)
+    Se = zeros(n_basefuncs_s, n_basefuncs_s)
+    Ee = zeros(n_basefuncs,3*n_basefuncs_t)
+    Fe = zeros(n_basefuncs_s, 3*n_basefuncs_t)
+    be = zeros(n_basefuncs_s)
     #fe = zeros(n_basefuncs)
 
     # Next we define the global force vector `f` and use that and
@@ -64,31 +74,76 @@ Mh = ScalarFunctionSpace(mesh, Legendre{dim-1,RefTetrahedron,1}())
     #f = zeros(ndofs(dh))
     #assembler = start_assemble(K, f)
 
-    #@inbounds for cell_idx in 1:numcells(mesh)
-        # Always remember to reset the element stiffness matrix and
-        # force vector since we reuse them for all elements.
+    #for cell_idx in 1:numcells(mesh)
+    cell_idx = 1
         fill!(Me, 0)
-        #fill!(fe, 0)
-        cell_idx = 1
+        fill!(Ce, 0)
+        fill!(Se, 0)
+        fill!(Ee, 0)
+        fill!(Fe, 0)
+        fill!(be, 0)
+        #Cell integrals
         for q_point in 1:getnquadpoints(Vh)
             dΩ = getdetJdV(Vh, cell_idx, q_point)
-            # For each quadrature point we loop over all the (local) shape functions.
-            # We need the value and gradient of the testfunction `v` and also the gradient
-            # of the trial function `u`.
             for i in 1:n_basefuncs
                 vh  = shape_value(Vh, q_point, i)
-                #fe[i] += v * dΩ
+                div_vh = shape_divergence(Vh, q_point, i, cell_idx)
                 for j in 1:n_basefuncs
-                    sigma = shape_value(Vh, q_point, j)
-                    Me[i, j] += (sigma ⋅ vh) * dΩ
+                    σ = shape_value(Vh, q_point, j)
+                    # Integral σ⋅v dΩ
+                    Me[i, j] += (σ ⋅ vh) * dΩ
+                end
+                for j in 1:n_basefuncs_s
+                    u = shape_value(Wh, q_point, j)
+                    # Integral u*∇⋅v dΩ
+                    Ce[i,j] += (u*div_vh) * dΩ
                 end
             end
         end
-
+        #RHS
+        for q_point in 1:getnquadpoints(Wh)
+            dΩ = getdetJdV(Wh, cell_idx, q_point)
+            for i in 1:n_basefuncs_s
+                w  = shape_value(Wh, q_point, i)
+                fh = function_value(ff, cell_idx,q_point)
+                # Integral f*u dΩ
+                be[i] += fh*w*dΩ
+            end
+        end
+        #Face integrals
+        for face_idx in 1:numfaces(mesh.cells[cell_idx])
+            for q_point in 1:getnfacequadpoints(Wh)
+                dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
+                orientation = face_orientation(mesh.cells[cell_idx], face_idx)
+                for i in 1:n_basefuncs_s
+                    w = face_shape_value(Wh, face_idx, q_point, i)
+                    for j in 1:n_basefuncs_s
+                        u = face_shape_value(Wh, face_idx, q_point, j)
+                        # Integral_∂T τ*u ⋅ w dS
+                        Se[i,j] += τ*(u*w) * dS
+                    end
+                    w = face_shape_value(Wh, face_idx, q_point, i, orientation)
+                    for j in 1:n_basefuncs_t
+                        û = shape_value(Mh, q_point, j)
+                        # Integral_∂T τ*û*w  dS
+                        Fe[i,n_basefuncs_t*(face_idx-1)+j] += (τ*(û*w)) * dS
+                    end
+                end
+                dS = getdetJdS(Mh, cell_idx, face_idx, q_point)
+                for i in 1:n_basefuncs
+                    v = face_shape_value(Vh, face_idx, q_point, i, orientation)
+                    n = get_normal(mesh.cells[cell_idx], face_idx)
+                    for j in 1:n_basefuncs_t
+                        û = shape_value(Mh, q_point, j)
+                        # Integral_∂T û(v⋅n)  dS
+                        Ee[i,n_basefuncs_t*(face_idx-1)+j] += (û*(v⋅n)) * dS
+                    end
+                end
+            end
+        end
         # The last step in the element loop is to assemble `Ke` and `fe`
         # into the global `K` and `f` with `assemble!`.
         # assemble!(assembler, celldofs(cell), fe, Ke)
-        println(Me)
     #end
     #return K, f
 #end

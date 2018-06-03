@@ -307,17 +307,17 @@ getnbasefunctions(::Legendre{1,RefTetrahedron,order}) where {order} = order + 1
 """
 value(ip::Legendre{1,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
 Compute value of Legendre basis `j` at point ξ
-on the reference line (-1,1)
+on the reference line (0,1)
 """
 function value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
     if k > getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
-    return sqrt((2*(k-1)+1)/2)*jacobi(ξ[1],k-1,0.0,0.0)
+    return sqrt((2*(k-1)+1))*jacobi(2*ξ[1]-1,k-1,0.0,0.0)
 end
 
 """
 gradient_value(ip::Legendre{1,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}
 Compute value of Legendre basis `j` derivative at point ξ
-on the reference line (-1,1)
+on the reference line (0,1)
 """
 function gradient_value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
     if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end

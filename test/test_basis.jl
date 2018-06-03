@@ -41,8 +41,8 @@ end
 
 function ref_value1(i::Int, ξ::Vec{1})
     ξ_x = ξ[1]
-    i == 1 && return 0.5*(1-ξ_x)
-    i == 2 && return 0.5*(1+ξ_x)
+    i == 1 && return 1-ξ_x
+    i == 2 && return ξ_x
     throw(ArgumentError("no shape function $i for interpolation $ip"))
 end
 ξ_ref = Vec{1}((0.5,))
@@ -56,13 +56,13 @@ end
 function ref_value(i::Int, x::Real)
     @assert i <= 3
     if i == 0
-        return sqrt(2)/2
+        return 1.0
     elseif i == 1
-        return sqrt(3/2)*x
+        return sqrt(3)*(2*x - 1)
     elseif i == 2
-        return sqrt(5/8)*(3*x^2 - 1)
+        return sqrt(5)*(6*x^2 - 6*x + 1)
     else
-        return sqrt(7/8)*(5*x^3-3*x)
+        return sqrt(7)*(2*x - 1)*(10*x^2 - 10*x + 1)
     end
 end
 function ref_dvalue(i::Int, x::Real)
@@ -70,11 +70,11 @@ function ref_dvalue(i::Int, x::Real)
     if i == 0
         return 0
     elseif i == 1
-        return sqrt(3/2)
+        return sqrt(3)*2
     elseif i == 2
-        return 3*sqrt(5/2)*x
+        return sqrt(5)*(12*x - 6)
     else
-        return sqrt(7/8)*(15*x^2 - 3)
+        return sqrt(7)*12*(5*x^2 - 5*x + 1)
     end
 end
 

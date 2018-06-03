@@ -22,10 +22,10 @@ end
 
 const sq2 = sqrt(2)
 const sq3 = sqrt(3)
-@test Wh.detJf[1] ≈ [sq2/4,sq2/4,1/2]
-@test Wh.detJf[2] ≈ [sq2/4,sq2/4,1/2]
-@test Wh.detJf[3] ≈ [1/2,sq2/4,sq2/4]
-@test Wh.detJf[4] ≈ [sq2/4,sq2/4,1/2]
+@test Wh.detJf[1] ≈ [sq2/2,sq2/2,1]
+@test Wh.detJf[2] ≈ [sq2/2,sq2/2,1]
+@test Wh.detJf[3] ≈ [1,sq2/2,sq2/2]
+@test Wh.detJf[4] ≈ [sq2/2,sq2/2,1]
 
 n_basefuncs = 6 #vectorial base
 n_basefuncs_s = 3 #scalar
@@ -41,13 +41,13 @@ Se_ex[2] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Se_ex[3] = [2*sq2+2 sqrt(6)-sqrt(3) sq2-1; sqrt(6)-sqrt(3)  4*sq2+4 0; sq2-1 0 4*sq2+4]
 Se_ex[4] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Ee_ex=Vector{Matrix{Float64}}(4)
-Ee_ex[1] = -1/sq2*[sq2/2 0 sq2/2 0 -sq2 0; sq3/2 -1/2 -sq3/2 1/2 0 -2; 1/2 sq3/2 1/2 sq3/2 2 0;
+Ee_ex[1] = -[sq2/2 0 sq2/2 0 -sq2 0; sq3/2 -1/2 -sq3/2 1/2 0 -2; 1/2 sq3/2 1/2 sq3/2 2 0;
            -sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2  1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0]
-Ee_ex[2] = -1/sq2*[-sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2 -1/2 0 -2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0;
+Ee_ex[2] = -[-sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2 -1/2 0 -2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0;
           sq2/2 0 -sq2/2 0 0 0; sq3/2 -1/2 sq3/2  -1/2 0 0; 1/2 sq3/2 -1/2 -sq3/2 0 0]
-Ee_ex[3] = -1/sq2*[0 0 sq2/2 0 -sq2/2 0; 0 0 -sq3/2  -1/2 0 1; 0 0 1/2 -sq3/2 1 0;
+Ee_ex[3] = -[0 0 sq2/2 0 -sq2/2 0; 0 0 -sq3/2  -1/2 0 1; 0 0 1/2 -sq3/2 1 0;
             -sq2 0 sq2/2 0 sq2/2 0; -sq3 1 -sq3/2 -1/2 0 -1; -1 -sq3 1/2 -sq3/2 -1 0]
-Ee_ex[4] = -1/sq2*[-sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2 1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0;
+Ee_ex[4] = -[-sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2 1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0;
            -sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2  -1/2 0 2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0]
 
 
@@ -55,7 +55,6 @@ Me = zeros(n_basefuncs, n_basefuncs)
 Ce = zeros(n_basefuncs, n_basefuncs_s)
 Se = zeros(n_basefuncs_s, n_basefuncs_s)
 Ee = zeros(n_basefuncs,3*n_basefuncs_t)
-Fe = zeros(n_basefuncs_s,3*n_basefuncs_t)
 
 for cell_idx in 1:numcells(mesh)
     fill!(Me, 0)
