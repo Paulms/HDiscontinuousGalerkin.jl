@@ -163,6 +163,11 @@ end
 
 @inline function_value(ifunc::InterpolatedFunction, cell::Int,q_point::Int) = ifunc.N[cell, q_point]
 
+"""
+function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}})
+Map coordinates of quadrature point `q_point` of Scalar Function Space `fs`
+into domain with vertices `x`
+"""
 function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}) where {dim,T}
     n_base_funcs = getngeobasefunctions(fs)
     @assert length(x) == n_base_funcs
@@ -173,6 +178,10 @@ function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::Abstr
     return vec
 end
 
+"""
+function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+Interpolation of scalar functions f(x): x ∈ ℝⁿ ↦ ℝ on Scalar Function Space `fs`
+"""
 function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
     n_cells = numcells(mesh)
     n_qpoints = getnquadpoints(fs)

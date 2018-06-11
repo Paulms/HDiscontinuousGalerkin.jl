@@ -49,18 +49,24 @@ Ee_ex[3] = -[0 0 sq2/2 0 -sq2/2 0; 0 0 -sq3/2  -1/2 0 1; 0 0 1/2 -sq3/2 1 0;
             -sq2 0 sq2/2 0 sq2/2 0; -sq3 1 -sq3/2 -1/2 0 -1; -1 -sq3 1/2 -sq3/2 -1 0]
 Ee_ex[4] = -[-sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2 1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0;
            -sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2  -1/2 0 2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0]
-
+He_ex=Vector{Matrix{Float64}}(4)
+He_ex[1] = [sq2/2 0 0 0 0 0 ;0 sq2/2 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1]
+He_ex[3] = [1 0 0 0 0 0 ;0 1 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 sq2/2 0; 0 0 0 0 0 sq2/2]
+He_ex[2] = He_ex[1]
+He_ex[4] = He_ex[1]
 
 Me = zeros(n_basefuncs, n_basefuncs)
 Ce = zeros(n_basefuncs, n_basefuncs_s)
 Se = zeros(n_basefuncs_s, n_basefuncs_s)
 Ee = zeros(n_basefuncs,3*n_basefuncs_t)
+He = zeros(3*n_basefuncs_t, 3*n_basefuncs_t)
 
 for cell_idx in 1:numcells(mesh)
     fill!(Me, 0)
     fill!(Ce, 0)
     fill!(Se, 0)
     fill!(Ee, 0)
+    fill!(He, 0)
     #Cell integrals
     for q_point in 1:getnquadpoints(Vh)
         dΩ = getdetJdV(Vh, cell_idx, q_point)
@@ -110,7 +116,16 @@ for cell_idx in 1:numcells(mesh)
                     Ee[i,n_basefuncs_t*(face_idx-1)+j] += (w*(u⋅n)) * dS
                 end
             end
+            for i in 1:n_basefuncs_t
+                μ = shape_value(Mh, q_point, i)
+                for j in 1:n_basefuncs_t
+                    û = shape_value(Mh, q_point, j)
+                    # Integral_∂T û*μ  dS
+                    He[n_basefuncs_t*(face_idx-1)+i,n_basefuncs_t*(face_idx-1)+j] += (û*μ) * dS
+                end
+            end
         end
     end
     @test Ee ≈ Ee_ex[cell_idx]
+    @test He ≈ He_ex[cell_idx]
 end

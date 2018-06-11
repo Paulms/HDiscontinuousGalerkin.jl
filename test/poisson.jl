@@ -25,6 +25,7 @@
 
 using HDiscontinuousGalerkin
 using Tensors
+using BlockArrays
 
 # Load mesh
 root_file = "mesh/figure2.1"
@@ -51,36 +52,35 @@ Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 # update!(ch, 0.0);
 
 # RHS function
-f(x::Vec{dim}) = 1
+f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
 # Now we have all the pieces needed to assemble the linear system, $K u = f$.
-#function doassemble(dh::DofHandler)
+function doassemble()
     # Allocate Matrices
     τ = 1
     n_basefuncs = getnbasefunctions(Vh)
     n_basefuncs_s = getnbasefunctions(Wh)
     n_basefuncs_t = getnbasefunctions(Mh)
-    Me = zeros(n_basefuncs, n_basefuncs)
-    Ce = zeros(n_basefuncs, n_basefuncs_s)
-    Se = zeros(n_basefuncs_s, n_basefuncs_s)
+    Ae = zeros(n_basefuncs, n_basefuncs)
+    Be = zeros(n_basefuncs, n_basefuncs_s)
+    Ce = zeros(n_basefuncs_s, n_basefuncs_s)
     Ee = zeros(n_basefuncs,3*n_basefuncs_t)
     Fe = zeros(n_basefuncs_s, 3*n_basefuncs_t)
-    be = zeros(n_basefuncs_s)
-    #fe = zeros(n_basefuncs)
+    be = zeros(n_basefuncs_s,1)
+    He = zeros(3*n_basefuncs_t, 3*n_basefuncs_t)
 
-    # Next we define the global force vector `f` and use that and
-    # the stiffness matrix `K` and create an assembler.
-    #f = zeros(ndofs(dh))
-    #assembler = start_assemble(K, f)
+    # create a matrix assembler and rhs vector
+    assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
 
-    #for cell_idx in 1:numcells(mesh)
-    cell_idx = 1
-        fill!(Me, 0)
+    for cell_idx in 1:numcells(mesh)
+        fill!(Ae, 0)
+        fill!(Be, 0)
         fill!(Ce, 0)
-        fill!(Se, 0)
         fill!(Ee, 0)
         fill!(Fe, 0)
+        fill!(He, 0)
         fill!(be, 0)
         #Cell integrals
         for q_point in 1:getnquadpoints(Vh)
@@ -91,12 +91,12 @@ ff = interpolate(f, Wh, mesh)
                 for j in 1:n_basefuncs
                     σ = shape_value(Vh, q_point, j)
                     # Integral σ⋅v dΩ
-                    Me[i, j] += (σ ⋅ vh) * dΩ
+                    Ae[i, j] += (σ ⋅ vh) * dΩ
                 end
                 for j in 1:n_basefuncs_s
                     u = shape_value(Wh, q_point, j)
                     # Integral u*∇⋅v dΩ
-                    Ce[i,j] += (u*div_vh) * dΩ
+                    Be[i,j] += (u*div_vh) * dΩ
                 end
             end
         end
@@ -120,7 +120,7 @@ ff = interpolate(f, Wh, mesh)
                     for j in 1:n_basefuncs_s
                         u = face_shape_value(Wh, face_idx, q_point, j)
                         # Integral_∂T τ*u ⋅ w dS
-                        Se[i,j] += τ*(u*w) * dS
+                        Ce[i,j] += τ*(u*w) * dS
                     end
                     w = face_shape_value(Wh, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
@@ -139,32 +139,65 @@ ff = interpolate(f, Wh, mesh)
                         Ee[i,n_basefuncs_t*(face_idx-1)+j] += (û*(v⋅n)) * dS
                     end
                 end
+                for i in 1:n_basefuncs_t
+                    μ = shape_value(Mh, q_point, i)
+                    for j in 1:n_basefuncs_t
+                        û = shape_value(Mh, q_point, j)
+                        # Integral_∂T û*μ  dS
+                        He[n_basefuncs_t*(face_idx-1)+i,n_basefuncs_t*(face_idx-1)+j] += (û*μ) * dS
+                    end
+                end
             end
         end
-        # The last step in the element loop is to assemble `Ke` and `fe`
-        # into the global `K` and `f` with `assemble!`.
-        # assemble!(assembler, celldofs(cell), fe, Ke)
-    #end
-    #return K, f
-#end
+        #Assamble Ke
+        Me = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
+        setblock!(Me, Ae, 1, 1)
+        setblock!(Me, Be', 2, 1)
+        setblock!(Me, -Be, 1, 2)
+        setblock!(Me, Ce, 2, 2)
+        Mei = factorize(Array(Me))
+        EFe = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
+        setblock!(EFe, -Ee, 1, 1)
+        setblock!(EFe, Fe, 2, 1)
+        Ge = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
+        setblock!(Ge, Ee, 1, 1)
+        setblock!(Ge, Fe, 2, 1)
+        Ge = Ge'
+        Bte = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s],[1])
+        setblock!(Bte, zeros(n_basefuncs,1),1,1)
+        setblock!(Bte, be,2,1)
+        Ate = Ge*(Mei\EFe)-He
+        bte = -Ge*(Mei\Bte)
+        #Assemble
+        gdof = Vector{Int}()
+        for fidx in mesh.cells[cell_idx].faces
+            for j in 1:n_basefuncs_t
+                push!(gdof, fidx*n_basefuncs_t-(n_basefuncs_t-j))
+            end
+        end
+        assemble!(assembler, gdof, Ate)
+        assemble!(rhs, gdof, bte[:,1])
+    end
+    return end_assemble(assembler), rhs
+end
 #md nothing # hide
 
-# ### Solution of the system
-K, f = doassemble(cellvalues, K, dh);
+### Solution of the system
+K, b = doassemble();
 
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-apply!(K, f, ch)
-u = K \ f;
+#apply!(K, f, ch)
+u = K \ b;
 
 # ### Exporting to VTK
 # To visualize the result we export the grid and our field `u`
 # to a VTK-file, which can be viewed in e.g. [ParaView](https://www.paraview.org/).
-vtk_grid("heat_equation", dh) do vtk
-    vtk_point_data(vtk, dh, u)
-end
+# vtk_grid("heat_equation", dh) do vtk
+#     vtk_point_data(vtk, dh, u)
+# end
 
 ## test the result                #src
-using Base.Test                   #src
-@test norm(u) ≈ 3.307743912641305 #src
+# using Base.Test                   #src
+# @test norm(u) ≈ 3.307743912641305 #src

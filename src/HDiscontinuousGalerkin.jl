@@ -17,6 +17,7 @@ include("utils.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 include("FunctionSpace.jl")
+include("assembler.jl")
 
 # Function exports
 # mesh
