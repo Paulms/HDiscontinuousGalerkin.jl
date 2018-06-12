@@ -267,6 +267,23 @@ end
 @inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,1}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJ[cell][face]*fs.qr_weights[q_point]
 @inline shape_value(fs::ScalarTraceFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
 
+spatial_coordinate(fs, i, coords, orientation)
+
+"""
+function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true)
+Map coordinates of quadrature point `q_point` of Scalar Trace Function Space `fs`
+into domain with vertices `x`
+"""
+function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true) where {dim,T}
+    n_base_funcs = getngeobasefunctions(fs)
+    @assert length(x) == n_base_funcs
+    vec = zero(Vec{dim,T})
+    @inbounds for i in 1:n_base_funcs
+        vec += geometric_value(fs, q_point, i) * x[i]
+    end
+    return vec
+end
+
 function ScalarTraceFunctionSpace(psp::ScalarFunctionSpace{dim,T,N,refshape,order,M},
     func_interpol::Interpolation{dim1,refshape,order}) where {dim, T,N,refshape, order,M, dim1}
     @assert getdim(psp) == getdim(func_interpol)+1

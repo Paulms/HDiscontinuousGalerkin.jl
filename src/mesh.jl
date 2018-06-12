@@ -34,6 +34,7 @@ struct PolygonalMesh{dims,Type} <: AbstractPolygonalMesh
     cells::Vector{Cell}
     nodes::Vector{Node{dims,Type}}
     faces::Vector{Face}
+    facesets::Dict{String,Set{Int}}
 end
 function get_maxnfaces(mesh::PolygonalMesh)
     nmax = 0
@@ -43,6 +44,7 @@ function get_maxnfaces(mesh::PolygonalMesh)
     nmax
 end
 @inline numfaces(mesh::PolygonalMesh) = length(mesh.faces)
+@inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
 @inline get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
 @inline get_coordinates(face::Face, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in face.nodes]
 @inline get_cells(mesh::PolygonalMesh) = mesh.cells
@@ -70,6 +72,17 @@ function cell_diameter(mesh::PolygonalMesh{N,T}, idx::Int) where {N,T}
     h
 end
 
+_check_setname(dict, name) = haskey(dict, name) && throw(ArgumentError("there already exists a set with the name: $name"))
+_warn_emptyset(set) = length(set) == 0 && warn("no entities added to set")
+
+function addfaceset!(mesh::PolygonalMesh, name::String, faceid::Set{Int})
+    _check_setname(mesh.facesets, name)
+    faceset = Set(faceid)
+    _warn_emptyset(faceset)
+    mesh.facesets[name] = faceset
+    mesh
+end
+
 # Read mesh from a triangle generated file
 function read_line(ln, types)
     m2 = matchall(r"\b((\d*\.)?\d+)\b", ln)
@@ -95,12 +108,13 @@ function parse_nodes!(nodes,root_file)
     end
 end
 
-function parse_cells!(cells, faces, nodes, root_file)
+function parse_cells!(cells, faces, facesets, nodes, root_file)
     #read cell nodes
     open(root_file*".ele") do f
         first_line = true
         n_el = 0
         n_faces = 0
+        boundary_faces = Set{Int}()
         for ln in eachline(f)
             m = match(r"^\s*(?:#|$)", ln)
             if m == nothing
@@ -131,6 +145,9 @@ function parse_cells!(cells, faces, nodes, root_file)
                             push!(faces, face)
                             n_faces = n_faces + 1
                             el_faces[i] = n_faces
+                            if ref > 0
+                                push!(boundary_faces, n_faces)
+                            end
                         end
                     end
                     orientation = [true,true,true]
@@ -159,6 +176,7 @@ function parse_cells!(cells, faces, nodes, root_file)
                 end
             end
         end
+        push!(facesets, "boundary" => boundary_faces)
     end
 end
 
@@ -171,7 +189,8 @@ function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces = Vector{Face}()
     cells = Vector{Cell}()
+    facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
-    parse_cells!(cells, faces, nodes, root_file)
-    PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, faces)
+    parse_cells!(cells, faces, facesets,nodes, root_file)
+    PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end

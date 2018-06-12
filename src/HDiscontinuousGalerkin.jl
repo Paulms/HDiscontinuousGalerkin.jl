@@ -18,6 +18,7 @@ include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 include("FunctionSpace.jl")
 include("assembler.jl")
+#include("boundary.jl")
 
 # Function exports
 # mesh
@@ -25,7 +26,11 @@ export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
 export numcells, numfaces, get_maxnfaces, get_normal
-export face_orientation
+export face_orientation, get_faceset
+
+# Boundaries
+export Dirichlet
+export apply!
 
 # Shapes
 export get_nodal_points, volume
