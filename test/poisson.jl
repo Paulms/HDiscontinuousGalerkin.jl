@@ -184,13 +184,10 @@ function doassemble()
     end
     return end_assemble(assembler), rhs, K_element, b_element
 end
-function get_uandσ(û, K_e, b_e, mesh)
+function get_uandσ!(σ_h,u_h,û, K_e, b_e, mesh)
     n_cells = numcells(mesh)
-    n_basefuncs = getnbasefunctions(Vh)
-    n_basefuncs_s = getnbasefunctions(Wh)
+    n_basefuncs = getnbasefunctions(σ_h)
     n_basefuncs_t = getnbasefunctions(Mh)
-    u = fill(zero(Float64) * Float64(NaN), n_cells, n_basefuncs_s)
-    σ = fill(zero(Float64) * Float64(NaN), n_cells, n_basefuncs)
     for cell_idx in 1:numcells(mesh)
         #get dofs
         û_e = Vector{Float64}()
@@ -198,10 +195,9 @@ function get_uandσ(û, K_e, b_e, mesh)
             push!(û_e, û[n_basefuncs_t*face-1:n_basefuncs_t*face]...)
         end
         dof = K_e[cell_idx]*û_e+b_e[cell_idx]
-        σ[cell_idx,:] = dof[1:n_basefuncs]
-        u[cell_idx,:] = dof[n_basefuncs+1:end]
+        σ_h.m_values[cell_idx,:] = dof[1:n_basefuncs]
+        u_h.m_values[cell_idx,:] = dof[n_basefuncs+1:end]
     end
-    return σ, u
 end
 #md nothing # hide
 
@@ -215,25 +211,12 @@ apply!(K,b,dbc)
 û = K \ b;
 
 #Now we recover original variables from skeleton û
-σ_h, u_h = get_uandσ(û, K_e, b_e, mesh)
+σ_h = TrialFunction(Vh, mesh)
+u_h = TrialFunction(Wh, mesh)
+get_uandσ!(σ_h, u_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-Etu_h = 0.0
-n_basefuncs_s = getnbasefunctions(Wh)
-for (k,cell) in enumerate(get_cells(mesh))
-    Elu_h = 0.0
-    coords = get_coordinates(cell, mesh)
-    for q_point in 1:getnquadpoints(Wh)
-        dΩ = getdetJdV(Wh, k, q_point)
-        u = 0.0
-        for i in 1:n_basefuncs_s
-            u  += u_h[k, i]*shape_value(Wh, q_point, i)
-        end
-        # Integral (u_h - u_ex) dΩ
-        Elu_h += (u-u_ex(spatial_coordinate(Wh, q_point, coords)))^2*dΩ
-    end
-    Etu_h += Elu_h
-end
+Etu_h = errornorm(u_h, u_ex, mesh)
 Etu_h <= 0.12
 
 #Plot mesh
@@ -252,17 +235,12 @@ triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
 PyPlot.triplot(triang, "ko-")
 
 #Plot avg(u_h)
-interpol = Dubiner{dim,RefTetrahedron,1}()
 nodalu_h = Vector{Float64}(length(mesh.nodes))
 share_count = zeros(Int,length(mesh.nodes))
 fill!(nodalu_h,0)
 for (k,cell) in enumerate(mesh.cells)
     for node in cell.nodes
-        u = 0.0
-        nodal_point = Wh.Jinv[k]⋅(mesh.nodes[node].x-mesh.nodes[cell.nodes[1]].x)
-        for i in 1:n_basefuncs_s
-            u  += u_h[k, i]*value(interpol, i, nodal_point)
-        end
+        u = value(u_h, k, mesh.nodes[node].x)
         nodalu_h[node] += u
         share_count[node] += 1
     end

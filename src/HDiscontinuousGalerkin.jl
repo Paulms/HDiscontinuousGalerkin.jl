@@ -19,6 +19,7 @@ include("StrangQuad.jl")
 include("FunctionSpace.jl")
 include("assembler.jl")
 include("boundary.jl")
+include("DiscreteFunctions.jl")
 
 # Function exports
 # mesh
@@ -62,6 +63,9 @@ export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJdS
 export face_shape_value
 export InterpolatedFunction, function_value, interpolate
-export spatial_coordinate
+export spatial_coordinate, reference_coordinate
+
+#Discrete Functions
+export TrialFunction
 
 end # module

@@ -12,6 +12,7 @@ struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,fdim,order,
     qr_weights::Vector{T}
     qr_face_weigths::Vector{T}
     qr_face_points::Vector{Vec{fdim,T}}
+    interpolation::Interpolation{dim,refshape,order}
 end
 
 @inline getngeobasefunctions(fs::ScalarFunctionSpace) = size(fs.M, 1)
@@ -31,6 +32,7 @@ end
 @inline geometric_value(fs::ScalarFunctionSpace, q_point::Int, base_func::Int) = fs.M[base_func, q_point]
 @inline geometric_face_value(fs::ScalarFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.L[base_func, q_point, face]
 @inline getdim(::ScalarFunctionSpace{dim}) where {dim} = dim
+@inline reference_coordinate(fs::ScalarFunctionSpace{dim,T},cell::Int, mesh::PolygonalMesh, x::Vec{dim,T}) where {dim,T} = fs.Jinv[cell]⋅(x-mesh.nodes[mesh.cells[cell].nodes[1]].x)
 
 """
     getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
@@ -146,7 +148,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
     end
     MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
     ScalarFunctionSpace{dim,T,NN,shape,dim1,order,MM}(N, dNdξ, E, detJ, detJf, Jinv,
-    M, L, normals,getweights(quad_rule), q_ref_faceweights, q_ref_facepoints)
+    M, L, normals,getweights(quad_rule), q_ref_faceweights, q_ref_facepoints, func_interpol)
 end
 
 function weighted_normal(J::Tensor{2,2}, face::Int, ::RefTetrahedron, ::Type{Val{2}})
@@ -156,45 +158,6 @@ function weighted_normal(J::Tensor{2,2}, face::Int, ::RefTetrahedron, ::Type{Val
         face == 3 && return Vec{2}((J[2,1], -J[1,1]))
     end
     throw(ArgumentError("unknown face number: $face"))
-end
-
-# Interpolated Functions
-struct InterpolatedFunction{dim,T}
-    N::Matrix{T}
-end
-
-@inline function_value(ifunc::InterpolatedFunction, cell::Int,q_point::Int) = ifunc.N[cell, q_point]
-
-"""
-function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}})
-Map coordinates of quadrature point `q_point` of Scalar Function Space `fs`
-into domain with vertices `x`
-"""
-function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}) where {dim,T}
-    n_base_funcs = getngeobasefunctions(fs)
-    @assert length(x) == n_base_funcs
-    vec = zero(Vec{dim,T})
-    @inbounds for i in 1:n_base_funcs
-        vec += geometric_value(fs, q_point, i) * x[i]
-    end
-    return vec
-end
-
-"""
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-Interpolation of scalar functions f(x): x ∈ ℝⁿ ↦ ℝ on Scalar Function Space `fs`
-"""
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-    n_cells = numcells(mesh)
-    n_qpoints = getnquadpoints(fs)
-    N = fill(zero(T)          * T(NaN), n_cells, n_qpoints)
-    for (k,cell) in enumerate(get_cells(mesh))
-        coords = get_coordinates(cell, mesh)
-        for i in 1:n_qpoints
-            N[k,i] = f(spatial_coordinate(fs, i, coords))
-        end
-    end
-    InterpolatedFunction{dim,T}(N)
 end
 
 # VectorFunctionSpace
