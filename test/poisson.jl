@@ -32,7 +32,7 @@ root_file = "mesh/figure2.1"
 mesh = parse_mesh_triangle(root_file)
 
 # ### Initiate function Spaces
-dim = 2
+const dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
