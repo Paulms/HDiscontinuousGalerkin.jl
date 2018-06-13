@@ -14,3 +14,4 @@ end
 @test mesh.cells[1].orientation == [true,false,true]
 @test mesh.cells[1].normals ≈ [Vec{2}([-sqrt(2)/2,sqrt(2)/2]), Vec{2}([-sqrt(2)/2,-sqrt(2)/2]), Vec{2}([1.0,0.0])]
 @test cell_diameter(mesh,1) == 1.0
+@test get_faceset(mesh, "boundary") == Set([3,6,7,8])

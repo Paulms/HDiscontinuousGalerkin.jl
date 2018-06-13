@@ -46,7 +46,7 @@ Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 # ### Boundary conditions
 # ch = ConstraintHandler(dh);
 # ∂Ω = union(getfaceset.(grid, ["boundary"])...);
-# dbc = Dirichlet(:u, ∂Ω, (x, t) -> 0)
+dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
 # add!(ch, dbc);
 # close!(ch)
 # update!(ch, 0.0);
@@ -73,6 +73,8 @@ function doassemble()
     # create a matrix assembler and rhs vector
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    K_element = Array{AbstractMatrix{Float64}}(numcells(mesh))
+    b_element = Array{AbstractVector{Float64}}(numcells(mesh))
 
     for cell_idx in 1:numcells(mesh)
         fill!(Ae, 0)
@@ -166,8 +168,10 @@ function doassemble()
         Bte = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s],[1])
         setblock!(Bte, zeros(n_basefuncs,1),1,1)
         setblock!(Bte, be,2,1)
-        Ate = Ge*(Mei\EFe)-He
-        bte = -Ge*(Mei\Bte)
+        K_element[cell_idx]=Mei\EFe
+        Ate = Ge*K_element[cell_idx]-He
+        b_element[cell_idx]=(Mei\Bte)[:,1]
+        bte = -Ge*b_element[cell_idx]
         #Assemble
         gdof = Vector{Int}()
         for fidx in mesh.cells[cell_idx].faces
@@ -178,18 +182,96 @@ function doassemble()
         assemble!(assembler, gdof, Ate)
         assemble!(rhs, gdof, bte[:,1])
     end
-    return end_assemble(assembler), rhs
+    return end_assemble(assembler), rhs, K_element, b_element
+end
+function get_uandσ(û, K_e, b_e, mesh)
+    n_cells = numcells(mesh)
+    n_basefuncs = getnbasefunctions(Vh)
+    n_basefuncs_s = getnbasefunctions(Wh)
+    n_basefuncs_t = getnbasefunctions(Mh)
+    u = fill(zero(Float64) * Float64(NaN), n_cells, n_basefuncs_s)
+    σ = fill(zero(Float64) * Float64(NaN), n_cells, n_basefuncs)
+    for cell_idx in 1:numcells(mesh)
+        #get dofs
+        û_e = Vector{Float64}()
+        for face in mesh.cells[cell_idx].faces
+            push!(û_e, û[n_basefuncs_t*face-1:n_basefuncs_t*face]...)
+        end
+        dof = K_e[cell_idx]*û_e+b_e[cell_idx]
+        σ[cell_idx,:] = dof[1:n_basefuncs]
+        u[cell_idx,:] = dof[n_basefuncs+1:end]
+    end
+    return σ, u
 end
 #md nothing # hide
 
 ### Solution of the system
-K, b = doassemble();
+K, b, K_e, b_e = doassemble();
 
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-#apply!(K, f, ch)
-u = K \ b;
+apply!(K,b,dbc)
+û = K \ b;
+
+#Now we recover original variables from skeleton û
+σ_h, u_h = get_uandσ(û, K_e, b_e, mesh)
+#Compute errors
+u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
+Etu_h = 0.0
+n_basefuncs_s = getnbasefunctions(Wh)
+for (k,cell) in enumerate(get_cells(mesh))
+    Elu_h = 0.0
+    coords = get_coordinates(cell, mesh)
+    for q_point in 1:getnquadpoints(Wh)
+        dΩ = getdetJdV(Wh, k, q_point)
+        u = 0.0
+        for i in 1:n_basefuncs_s
+            u  += u_h[k, i]*shape_value(Wh, q_point, i)
+        end
+        # Integral (u_h - u_ex) dΩ
+        Elu_h += (u-u_ex(spatial_coordinate(Wh, q_point, coords)))^2*dΩ
+    end
+    Etu_h += Elu_h
+end
+Etu_h <= 0.12
+
+#Plot mesh
+using PyCall
+using PyPlot
+@pyimport matplotlib.tri as mtri
+triangles = Matrix{Int}(numcells(mesh), 3)
+m_nodes = Matrix{Float64}(length(mesh.nodes),dim)
+for (k,node) in enumerate(mesh.nodes)
+    m_nodes[k,:] = node.x
+end
+for k = 1:numcells(mesh)
+    triangles[k,:] = mesh.cells[k].nodes-1
+end
+triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+PyPlot.triplot(triang, "ko-")
+
+#Plot avg(u_h)
+interpol = Dubiner{dim,RefTetrahedron,1}()
+nodalu_h = Vector{Float64}(length(mesh.nodes))
+share_count = zeros(Int,length(mesh.nodes))
+fill!(nodalu_h,0)
+for (k,cell) in enumerate(mesh.cells)
+    for node in cell.nodes
+        u = 0.0
+        nodal_point = Wh.Jinv[k]⋅(mesh.nodes[node].x-mesh.nodes[cell.nodes[1]].x)
+        for i in 1:n_basefuncs_s
+            u  += u_h[k, i]*value(interpol, i, nodal_point)
+        end
+        nodalu_h[node] += u
+        share_count[node] += 1
+    end
+end
+nodalu_h = nodalu_h./share_count
+PyPlot.tricontourf(triang, nodalu_h)
+
+
+
 
 # ### Exporting to VTK
 # To visualize the result we export the grid and our field `u`

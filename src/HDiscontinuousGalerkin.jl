@@ -18,7 +18,7 @@ include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 include("FunctionSpace.jl")
 include("assembler.jl")
-#include("boundary.jl")
+include("boundary.jl")
 
 # Function exports
 # mesh
@@ -51,6 +51,9 @@ export getorder, getlowerdiminterpol
 
 #utils
 export get_affine_map, integrate
+
+#Assembler
+export start_assemble, assemble!, end_assemble
 
 #FunctionSpaces
 export VectorFunctionSpace, ScalarFunctionSpace, ScalarTraceFunctionSpace

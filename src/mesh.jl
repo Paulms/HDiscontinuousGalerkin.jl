@@ -1,6 +1,4 @@
 # Abstract type for Polygonal Meshes
-using Tensors
-
 abstract type AbstractPolygonalMesh end
 
 struct Node{N,T}
@@ -108,7 +106,26 @@ function parse_nodes!(nodes,root_file)
     end
 end
 
-function parse_cells!(cells, faces, facesets, nodes, root_file)
+function parse_faces!(faces,root_file)
+    open(root_file*".edge") do f
+        first_line = true
+        for ln in eachline(f)
+            m = match(r"^\s*(?:#|$)", ln)
+            if m == nothing
+                if (first_line)   #skip first line
+                    first_line = false
+                else
+                    #parse nodes
+                    pln = collect(read_line(ln, (Int,Int,Int,Int)))
+                    face = Face(Vector{Int}(),pln[2:3],pln[4])
+                    push!(faces, face)
+                end
+            end
+        end
+    end
+end
+
+function parse_cells!(cells, faces, faces_unorded,facesets, nodes, root_file)
     #read cell nodes
     open(root_file*".ele") do f
         first_line = true
@@ -140,7 +157,12 @@ function parse_cells!(cells, faces, facesets, nodes, root_file)
                             end
                         end
                         if !face_found
-                            ref = (nodes[c_face[1]].ref == 1 && nodes[c_face[2]].ref == 1) ? 1 : 0
+                            ref = -1
+                            for (j,face) in enumerate(faces_unorded)
+                                if sort(face.nodes) == sort(c_face)
+                                    ref = face.ref
+                                end
+                            end
                             face = Face([n_el],c_face,ref)
                             push!(faces, face)
                             n_faces = n_faces + 1
@@ -187,10 +209,12 @@ Ex: `parse_mesh_triangle("figure.1")`
 """
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
+    faces_unorded = Vector{Face}()
     faces = Vector{Face}()
     cells = Vector{Cell}()
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
-    parse_cells!(cells, faces, facesets,nodes, root_file)
+    parse_faces!(faces_unorded, root_file)
+    parse_cells!(cells, faces, faces_unorded,facesets,nodes, root_file)
     PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end
