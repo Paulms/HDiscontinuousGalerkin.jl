@@ -28,13 +28,13 @@ using Tensors
 using BlockArrays
 
 # Load mesh
-root_file = "mesh/figure2.1"
-mesh = parse_mesh_triangle(root_file)
+root_file = "mesh/figure.1"
+@time mesh = parse_mesh_triangle(root_file)
 
 # ### Initiate function Spaces
 const dim = 2
+@time Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
 # dh = DofHandler(mesh)
@@ -46,14 +46,14 @@ Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 # ### Boundary conditions
 # ch = ConstraintHandler(dh);
 # ∂Ω = union(getfaceset.(grid, ["boundary"])...);
-dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
+@time dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
 # add!(ch, dbc);
 # close!(ch)
 # update!(ch, 0.0);
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
-ff = interpolate(f, Wh, mesh)
+@time ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
 # Now we have all the pieces needed to assemble the linear system, $K u = f$.
 function doassemble(Vh, Wh, Mh, τ = 1)
@@ -151,20 +151,20 @@ function doassemble(Vh, Wh, Mh, τ = 1)
             end
         end
         #Assamble Ke
-        Me = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
+        Me = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
         setblock!(Me, Ae, 1, 1)
         setblock!(Me, Be', 2, 1)
         setblock!(Me, -Be, 1, 2)
         setblock!(Me, Ce, 2, 2)
         Mei = factorize(Array(Me))
-        EFe = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
+        EFe = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
         setblock!(EFe, -Ee, 1, 1)
         setblock!(EFe, Fe, 2, 1)
-        Ge = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
+        Ge = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
         setblock!(Ge, Ee, 1, 1)
         setblock!(Ge, Fe, 2, 1)
         Ge = Ge'
-        Bte = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s],[1])
+        Bte = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s],[1])
         setblock!(Bte, zeros(n_basefuncs,1),1,1)
         setblock!(Bte, be,2,1)
         K_element[cell_idx]=Mei\EFe
@@ -203,22 +203,22 @@ end
 #md nothing # hide
 
 ### Solution of the system
-K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
+@time K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
 
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-apply!(K,b,dbc)
+@time apply!(K,b,dbc)
 û = K \ b;
 #Now we recover original variables from skeleton û
 û_h = TrialFunction(Mh, mesh)
 σ_h = TrialFunction(Vh, mesh)
 u_h = TrialFunction(Wh, mesh)
-get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
+@time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)
-Etu_h <= 0.12
+Etu_h <= 0.0007
 
 #Plot mesh
 using PyCall
@@ -258,7 +258,3 @@ PyPlot.tricontourf(triang, nodalu_h)
 # vtk_grid("heat_equation", dh) do vtk
 #     vtk_point_data(vtk, dh, u)
 # end
-
-## test the result                #src
-# using Base.Test                   #src
-# @test norm(u) ≈ 3.307743912641305 #src

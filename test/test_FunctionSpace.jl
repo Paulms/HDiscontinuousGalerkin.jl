@@ -169,20 +169,20 @@ function doassemble(Vh, Wh, Mh, τ = 1)
         @test Ee ≈ Ee_ex[cell_idx]
         @test He ≈ He_ex[cell_idx]
         #Assamble Ke
-        Me = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
+        Me = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
         setblock!(Me, Ae, 1, 1)
         setblock!(Me, Be', 2, 1)
         setblock!(Me, -Be, 1, 2)
         setblock!(Me, Ce, 2, 2)
         Mei = factorize(Array(Me))
-        EFe = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
+        EFe = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
         setblock!(EFe, -Ee, 1, 1)
         setblock!(EFe, Fe, 2, 1)
-        Ge = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
+        Ge = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [3*n_basefuncs_t])
         setblock!(Ge, Ee, 1, 1)
         setblock!(Ge, Fe, 2, 1)
         Ge = Ge'
-        Bte = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s],[1])
+        Bte = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s],[1])
         setblock!(Bte, zeros(n_basefuncs,1),1,1)
         setblock!(Bte, be,2,1)
         K_element[cell_idx]=Mei\EFe
