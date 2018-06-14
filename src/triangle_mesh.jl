@@ -175,23 +175,8 @@ function parse_cells!(cells, faces, faces_unorded,facesets, nodes, root_file)
                     orientation = [true,true,true]
                     normals = fill(zero(Vec{2,Float64}) * Float64(NaN), 3)
                     #check consistent cells orientation and compute normals
-                    coords = [nodes[j].x for j in el_nodes]
-                    a = coords[2]-coords[1]
-                    b = coords[3]-coords[1]
-                    if (a[1]*b[2]-a[2]*b[1]) < 0
-                        #swap vertices 2 and 3
-                        el_nodes[2],el_nodes[3] = el_nodes[3],el_nodes[2]
-                        el_faces = reverse(el_faces)
-                    end
-                    #Compute normals
-                    for (i,k) in enumerate(((2,3),(3,1),(1,2)))
-                        v1 =  coords[k[2]] - coords[k[1]]
-                        n1 = Vec{2}([v1[2], -v1[1]])
-                        normals[i] = n1/norm(n1)
-                        #Compute faces orientation
-                        #Just to standarize jump definitions
-                        orientation[i] = el_nodes[k[2]] > el_nodes[k[1]]
-                    end
+                    _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
+
                     #save cell
                     cell = Cell(el_nodes, el_faces, orientation, normals)
                     push!(cells, cell)

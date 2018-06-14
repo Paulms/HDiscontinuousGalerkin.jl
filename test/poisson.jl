@@ -28,28 +28,21 @@ using Tensors
 using BlockArrays
 
 # Load mesh
-root_file = "mesh/figure.1"
-@time mesh = parse_mesh_triangle(root_file)
+#To load mesh from triangle
+#root_file = "mesh/figure.1"
+#@time mesh = parse_mesh_triangle(root_file)
+
+#or use internal mesh
+@time mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
-const dim = 2
+dim = 2
 @time Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
-# dh = DofHandler(mesh)
-# push!(dh, :u, Wh)
-# push!(dh, :sigma, Vh)
-# push!(dh, :ut, Mh)
-# close!(dh);
-
 # ### Boundary conditions
-# ch = ConstraintHandler(dh);
-# ∂Ω = union(getfaceset.(grid, ["boundary"])...);
 @time dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
-# add!(ch, dbc);
-# close!(ch)
-# update!(ch, 0.0);
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -218,7 +211,7 @@ u_h = TrialFunction(Wh, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)
-Etu_h <= 0.0007
+Etu_h <= 0.00005
 
 #Plot mesh
 using PyCall
@@ -236,6 +229,7 @@ triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
 PyPlot.triplot(triang, "ko-")
 
 #Plot avg(u_h)
+# We need avg since u_h is discontinuous
 nodalu_h = Vector{Float64}(length(mesh.nodes))
 share_count = zeros(Int,length(mesh.nodes))
 fill!(nodalu_h,0)

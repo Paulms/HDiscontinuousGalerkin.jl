@@ -9,8 +9,9 @@ abstract type AbstractQuadratureRule end
 abstract type Interpolation{dim,shape,order} end
 abstract type DiscreteFunctionSpace{dim,T,refshape} end
 
-include("mesh.jl")
 include("shapes.jl")
+include("generate_mesh.jl")
+include("triangle_mesh.jl")
 include("basis.jl")
 include("quadrature.jl")
 include("utils.jl")
@@ -28,6 +29,8 @@ export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
 export numcells, numfaces, get_maxnfaces, get_normal
 export face_orientation, get_faceset
+export rectangle_mesh
+export TriangleCell
 
 # Boundaries
 export Dirichlet
