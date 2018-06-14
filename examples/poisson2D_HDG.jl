@@ -48,7 +48,7 @@ Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 @time ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
-# Now we have all the pieces needed to assemble the linear system, $K u = f$.
+# Now we have all the pieces needed to assemble the linear system, $K û = f$.
 function doassemble(Vh, Wh, Mh, τ = 1)
     # Allocate Matrices
     n_basefuncs = getnbasefunctions(Vh)
@@ -65,6 +65,7 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     # create a matrix assembler and rhs vector
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    # Preallocate vectors to store data for u and σ recovery
     K_element = Array{AbstractMatrix{Float64}}(numcells(mesh))
     b_element = Array{AbstractVector{Float64}}(numcells(mesh))
 

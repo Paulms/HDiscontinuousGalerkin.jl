@@ -74,9 +74,21 @@ function _build_cells(cells, el_nodes, n_el, faces, nodes)
     push!(cells, cell)
 end
 
+"""
+rectangle_mesh(::Type{TriangleCell}, nel::NTuple{2,Int}, LL::Vec{2,T}, UR::Vec{2,T})
+Generate a rectangular mesh with triangular cells, where `LL` is the low left vertex
+and `UR` is the upper right one. `nel` is a tuple with the number of partions to be
+used in each dimension.
+"""
 @inline rectangle_mesh(::Type{TriangleCell}, nel::NTuple{2,Int}, LL::Vec{2,T}, UR::Vec{2,T}) where {T} =
         rectangle_mesh(RefTetrahedron, Val{2}, nel, LL, UR)
 
+"""
+rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,Int}, LL::Vec{2,T}, UR::Vec{2,T})
+Generate a rectangular mesh with triangular cells, where `LL` is the low left vertex
+and `UR` is the upper right one. `nel` is a tuple with the number of partions to be
+used in each dimension.
+"""
 function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,Int}, LL::Vec{2,T}, UR::Vec{2,T}) where {T}
     LR = Vec{2}((UR[1],LL[2]))
     UL = Vec{2}((LL[1],UR[2]))

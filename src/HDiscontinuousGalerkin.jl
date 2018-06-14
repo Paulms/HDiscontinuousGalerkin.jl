@@ -10,6 +10,7 @@ abstract type Interpolation{dim,shape,order} end
 abstract type DiscreteFunctionSpace{dim,T,refshape} end
 
 include("shapes.jl")
+include("mesh.jl")
 include("generate_mesh.jl")
 include("triangle_mesh.jl")
 include("basis.jl")
