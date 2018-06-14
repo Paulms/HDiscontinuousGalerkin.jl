@@ -28,6 +28,7 @@ end
 
 const sq2 = sqrt(2)
 const sq3 = sqrt(3)
+@test Wh.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
 @test Wh.detJf[1] ≈ [sq2/2,sq2/2,1]
 @test Wh.detJf[2] ≈ [sq2/2,sq2/2,1]
 @test Wh.detJf[3] ≈ [1,sq2/2,sq2/2]
@@ -35,7 +36,6 @@ const sq3 = sqrt(3)
 
 # ### Boundary conditions
 dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
-
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh, mesh)
@@ -164,12 +164,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
                     end
                 end
             end
-            #Perform Tests
-            @test Ce ≈ Ce_ex[cell_idx]
-            @test Ee ≈ Ee_ex[cell_idx]
-            println("Cell: ",cell_idx)
-            @test He ≈ He_ex[cell_idx]
         end
+        @test Ce ≈ Ce_ex[cell_idx]
+        @test Ee ≈ Ee_ex[cell_idx]
+        @test He ≈ He_ex[cell_idx]
         #Assamble Ke
         Me = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
         setblock!(Me, Ae, 1, 1)
@@ -204,6 +202,15 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     return end_assemble(assembler), rhs, K_element, b_element
 end
 
+### Solution of the system
+K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
+
+# To account for the boundary conditions we use the `apply!` function.
+# This modifies elements in `K` and `f` respectively, such that
+# we can get the correct solution vector `u` by using `\`.
+apply!(K,b,dbc)
+û = K \ b;
+#Now we recover original variables from skeleton û
 function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
     n_cells = numcells(mesh)
     n_basefuncs = getnbasefunctions(σ_h)
@@ -221,15 +228,6 @@ function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
     end
 end
 
-### Solution of the system
-K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
-
-# To account for the boundary conditions we use the `apply!` function.
-# This modifies elements in `K` and `f` respectively, such that
-# we can get the correct solution vector `u` by using `\`.
-apply!(K,b,dbc)
-û = K \ b;
-#Now we recover original variables from skeleton û
 û_h = TrialFunction(Mh, mesh)
 σ_h = TrialFunction(Vh, mesh)
 u_h = TrialFunction(Wh, mesh)
