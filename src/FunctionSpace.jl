@@ -7,10 +7,12 @@ struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,fdim,order,
     detJf::Vector{Matrix{T}}
     Jinv::Matrix{Tensor{2,dim,T,M}}
     M::Matrix{T}
+    L::Array{T,3}
     normals::Array{Vec{dim,T},3}
     qr_weights::Vector{T}
     qr_face_weigths::Vector{T}
     qr_face_points::Vector{Vec{fdim,T}}
+    interpolation::Interpolation{dim,refshape,order}
 end
 
 @inline getngeobasefunctions(fs::ScalarFunctionSpace) = size(fs.M, 1)
@@ -28,7 +30,10 @@ end
 @inline shape_divergence(fs::ScalarFunctionSpace{dim,T,2}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = sum(fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point])
 @inline shape_divergence(fs::ScalarFunctionSpace{dim,T,1}, q_point::Int, base_func::Int, cell::Int) where {dim,T} = sum(fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell])
 @inline geometric_value(fs::ScalarFunctionSpace, q_point::Int, base_func::Int) = fs.M[base_func, q_point]
+@inline geometric_face_value(fs::ScalarFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.L[base_func, q_point, face]
 @inline getdim(::ScalarFunctionSpace{dim}) where {dim} = dim
+@inline reference_coordinate(fs::ScalarFunctionSpace{dim,T},cell::Int, mesh::PolygonalMesh, x::Vec{dim,T}) where {dim,T} = fs.Jinv[cell]⋅(x-mesh.nodes[mesh.cells[cell].nodes[1]].x)
+@inline get_interpolation(fs::ScalarFunctionSpace) = fs.interpolation
 
 """
     getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
@@ -144,7 +149,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
     end
     MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
     ScalarFunctionSpace{dim,T,NN,shape,dim1,order,MM}(N, dNdξ, E, detJ, detJf, Jinv,
-    M, normals,getweights(quad_rule), q_ref_faceweights, q_ref_facepoints)
+    M, L, normals,getweights(quad_rule), q_ref_faceweights, q_ref_facepoints, func_interpol)
 end
 
 function weighted_normal(J::Tensor{2,2}, face::Int, ::RefTetrahedron, ::Type{Val{2}})
@@ -154,45 +159,6 @@ function weighted_normal(J::Tensor{2,2}, face::Int, ::RefTetrahedron, ::Type{Val
         face == 3 && return Vec{2}((J[2,1], -J[1,1]))
     end
     throw(ArgumentError("unknown face number: $face"))
-end
-
-# Interpolated Functions
-struct InterpolatedFunction{dim,T}
-    N::Matrix{T}
-end
-
-@inline function_value(ifunc::InterpolatedFunction, cell::Int,q_point::Int) = ifunc.N[cell, q_point]
-
-"""
-function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}})
-Map coordinates of quadrature point `q_point` of Scalar Function Space `fs`
-into domain with vertices `x`
-"""
-function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}) where {dim,T}
-    n_base_funcs = getngeobasefunctions(fs)
-    @assert length(x) == n_base_funcs
-    vec = zero(Vec{dim,T})
-    @inbounds for i in 1:n_base_funcs
-        vec += geometric_value(fs, q_point, i) * x[i]
-    end
-    return vec
-end
-
-"""
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-Interpolation of scalar functions f(x): x ∈ ℝⁿ ↦ ℝ on Scalar Function Space `fs`
-"""
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-    n_cells = numcells(mesh)
-    n_qpoints = getnquadpoints(fs)
-    N = fill(zero(T)          * T(NaN), n_cells, n_qpoints)
-    for (k,cell) in enumerate(get_cells(mesh))
-        coords = get_coordinates(cell, mesh)
-        for i in 1:n_qpoints
-            N[k,i] = f(spatial_coordinate(fs, i, coords))
-        end
-    end
-    InterpolatedFunction{dim,T}(N)
 end
 
 # VectorFunctionSpace
@@ -254,9 +220,10 @@ function VectorFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{d
 end
 
 # Scalar Trace Function Space (Scalar functions defined only on cell boundaries)
-struct ScalarTraceFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape, order} <: DiscreteFunctionSpace{dim,T,refshape}
+struct ScalarTraceFunctionSpace{dim,T<:Real,fdim,NN,refshape<:AbstractRefShape, order} <: DiscreteFunctionSpace{dim,T,refshape}
     N::Matrix{T}
-    dNdξ::Matrix{Vec{dim,T}}
+    L::Array{T,3}
+    dNdξ::Matrix{Vec{fdim,T}}
     detJ::Vector{Matrix{T}}
     qr_weights::Vector{T}
 end
@@ -266,6 +233,25 @@ end
 @inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,2}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJ[cell,q_point][face]*fs.qr_weights[q_point]
 @inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,1}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJ[cell][face]*fs.qr_weights[q_point]
 @inline shape_value(fs::ScalarTraceFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
+@inline getngeobasefunctions(fs::ScalarTraceFunctionSpace) = size(fs.L,1)
+@inline geometric_value(fs::ScalarTraceFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.L[base_func, q_point, face]
+
+"""
+function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true)
+Map coordinates of quadrature point `q_point` of Scalar Trace Function Space `fs`
+into domain with vertices `x`
+"""
+function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true) where {dim,T}
+    n_base_funcs = getngeobasefunctions(fs)
+    @assert length(x) == n_base_funcs
+    vec = zero(Vec{dim,T})
+    n = getnquadpoints(fs)
+    @inbounds for i in 1:n_base_funcs
+        or_q_point = orientation ? q_point : n - q_point + 1
+        vec += geometric_value(fs, face, or_q_point, i) * x[i]
+    end
+    return vec
+end
 
 function ScalarTraceFunctionSpace(psp::ScalarFunctionSpace{dim,T,N,refshape,order,M},
     func_interpol::Interpolation{dim1,refshape,order}) where {dim, T,N,refshape, order,M, dim1}
@@ -273,11 +259,11 @@ function ScalarTraceFunctionSpace(psp::ScalarFunctionSpace{dim,T,N,refshape,orde
     detJ = psp.detJf
     qr_weights = psp.qr_face_weigths
     qr_points = psp.qr_face_points
-    ScalarTraceFunctionSpace(Float64, N, func_interpol, detJ, qr_weights, qr_points)
+    ScalarTraceFunctionSpace(Float64, N, func_interpol, detJ, qr_weights, qr_points, psp.L)
 end
 
 function ScalarTraceFunctionSpace(::Type{T}, NN, func_interpol::Interpolation{dim,refshape,order},
-    detJ::Vector, qr_weights::Vector, qr_points::Vector) where {dim, refshape, order, T}
+    detJ::Vector, qr_weights::Vector, qr_points::Vector, L::Array{T,3}) where {dim, refshape, order, T}
     n_qpoints = length(qr_weights)
 
     # Function interpolation
@@ -291,5 +277,5 @@ function ScalarTraceFunctionSpace(::Type{T}, NN, func_interpol::Interpolation{di
             N[i, qp] = value(func_interpol, i, ξ)
         end
     end
-    ScalarTraceFunctionSpace{dim,T,NN,refshape, order}(N, dNdξ,detJ, qr_weights)
+    ScalarTraceFunctionSpace{dim+1,T,dim,NN,refshape, order}(N, L, dNdξ,detJ, qr_weights)
 end

@@ -18,6 +18,8 @@ include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 include("FunctionSpace.jl")
 include("assembler.jl")
+include("boundary.jl")
+include("DiscreteFunctions.jl")
 
 # Function exports
 # mesh
@@ -25,7 +27,11 @@ export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
 export numcells, numfaces, get_maxnfaces, get_normal
-export face_orientation
+export face_orientation, get_faceset
+
+# Boundaries
+export Dirichlet
+export apply!
 
 # Shapes
 export get_nodal_points, volume
@@ -47,6 +53,9 @@ export getorder, getlowerdiminterpol
 #utils
 export get_affine_map, integrate
 
+#Assembler
+export start_assemble, assemble!, end_assemble
+
 #FunctionSpaces
 export VectorFunctionSpace, ScalarFunctionSpace, ScalarTraceFunctionSpace
 export getnquadpoints, getdetJdV, shape_value
@@ -54,5 +63,10 @@ export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJdS
 export face_shape_value
 export InterpolatedFunction, function_value, interpolate
+export spatial_coordinate, reference_coordinate
+
+#Discrete Functions
+export TrialFunction
+export errornorm
 
 end # module

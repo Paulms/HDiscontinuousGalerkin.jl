@@ -32,7 +32,7 @@ root_file = "mesh/figure2.1"
 mesh = parse_mesh_triangle(root_file)
 
 # ### Initiate function Spaces
-dim = 2
+const dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
@@ -46,7 +46,7 @@ Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 # ### Boundary conditions
 # ch = ConstraintHandler(dh);
 # ∂Ω = union(getfaceset.(grid, ["boundary"])...);
-# dbc = Dirichlet(:u, ∂Ω, (x, t) -> 0)
+dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
 # add!(ch, dbc);
 # close!(ch)
 # update!(ch, 0.0);
@@ -56,9 +56,8 @@ f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
 # Now we have all the pieces needed to assemble the linear system, $K u = f$.
-function doassemble()
+function doassemble(Vh, Wh, Mh, τ = 1)
     # Allocate Matrices
-    τ = 1
     n_basefuncs = getnbasefunctions(Vh)
     n_basefuncs_s = getnbasefunctions(Wh)
     n_basefuncs_t = getnbasefunctions(Mh)
@@ -73,6 +72,8 @@ function doassemble()
     # create a matrix assembler and rhs vector
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    K_element = Array{AbstractMatrix{Float64}}(numcells(mesh))
+    b_element = Array{AbstractVector{Float64}}(numcells(mesh))
 
     for cell_idx in 1:numcells(mesh)
         fill!(Ae, 0)
@@ -105,7 +106,7 @@ function doassemble()
             dΩ = getdetJdV(Wh, cell_idx, q_point)
             for i in 1:n_basefuncs_s
                 w  = shape_value(Wh, q_point, i)
-                fh = function_value(ff, cell_idx,q_point)
+                fh = value(ff, cell_idx,q_point)
                 # Integral f*u dΩ
                 be[i] += fh*w*dΩ
             end
@@ -166,8 +167,10 @@ function doassemble()
         Bte = BlockArray{Float64}(uninitialized, [n_basefuncs,n_basefuncs_s],[1])
         setblock!(Bte, zeros(n_basefuncs,1),1,1)
         setblock!(Bte, be,2,1)
-        Ate = Ge*(Mei\EFe)-He
-        bte = -Ge*(Mei\Bte)
+        K_element[cell_idx]=Mei\EFe
+        Ate = Ge*K_element[cell_idx]-He
+        b_element[cell_idx]=(Mei\Bte)[:,1]
+        bte = -Ge*b_element[cell_idx]
         #Assemble
         gdof = Vector{Int}()
         for fidx in mesh.cells[cell_idx].faces
@@ -178,18 +181,76 @@ function doassemble()
         assemble!(assembler, gdof, Ate)
         assemble!(rhs, gdof, bte[:,1])
     end
-    return end_assemble(assembler), rhs
+    return end_assemble(assembler), rhs, K_element, b_element
+end
+
+function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
+    n_cells = numcells(mesh)
+    n_basefuncs = getnbasefunctions(σ_h)
+    n_basefuncs_t = getnbasefunctions(Mh)
+    for cell_idx in 1:numcells(mesh)
+        #get dofs
+        û_e = Vector{Float64}()
+        for (k,face) in enumerate(mesh.cells[cell_idx].faces)
+            push!(û_e, û[n_basefuncs_t*face-1:n_basefuncs_t*face]...)
+            û_h.m_values[cell_idx,:,k] = û[n_basefuncs_t*face-1:n_basefuncs_t*face]
+        end
+        dof = K_e[cell_idx]*û_e+b_e[cell_idx]
+        σ_h.m_values[cell_idx,:] = dof[1:n_basefuncs]
+        u_h.m_values[cell_idx,:] = dof[n_basefuncs+1:end]
+    end
 end
 #md nothing # hide
 
 ### Solution of the system
-K, b = doassemble();
+K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
 
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-#apply!(K, f, ch)
-u = K \ b;
+apply!(K,b,dbc)
+û = K \ b;
+#Now we recover original variables from skeleton û
+û_h = TrialFunction(Mh, mesh)
+σ_h = TrialFunction(Vh, mesh)
+u_h = TrialFunction(Wh, mesh)
+get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
+#Compute errors
+u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
+Etu_h = errornorm(u_h, u_ex, mesh)
+Etu_h <= 0.12
+
+#Plot mesh
+using PyCall
+using PyPlot
+@pyimport matplotlib.tri as mtri
+triangles = Matrix{Int}(numcells(mesh), 3)
+m_nodes = Matrix{Float64}(length(mesh.nodes),dim)
+for (k,node) in enumerate(mesh.nodes)
+    m_nodes[k,:] = node.x
+end
+for k = 1:numcells(mesh)
+    triangles[k,:] = mesh.cells[k].nodes-1
+end
+triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+PyPlot.triplot(triang, "ko-")
+
+#Plot avg(u_h)
+nodalu_h = Vector{Float64}(length(mesh.nodes))
+share_count = zeros(Int,length(mesh.nodes))
+fill!(nodalu_h,0)
+for (k,cell) in enumerate(mesh.cells)
+    for node in cell.nodes
+        u = value(u_h, k, mesh.nodes[node].x)
+        nodalu_h[node] += u
+        share_count[node] += 1
+    end
+end
+nodalu_h = nodalu_h./share_count
+PyPlot.tricontourf(triang, nodalu_h)
+
+
+
 
 # ### Exporting to VTK
 # To visualize the result we export the grid and our field `u`
