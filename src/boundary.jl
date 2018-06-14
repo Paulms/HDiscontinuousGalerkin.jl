@@ -8,7 +8,7 @@ function Dirichlet(fs::DiscreteFunctionSpace, mesh::PolygonalMesh, faceset::Stri
     Dirichlet(fs, mesh, get_faceset(mesh, faceset), f)
 end
 
-function Dirichlet(fs::ScalarTraceFunctionSpace{1,T}, mesh::PolygonalMesh, faceset::Set{Int},f::Function) where {T}
+function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faceset::Set{Int},f::Function) where {T}
     #Project function on faces
     n_dof = getnbasefunctions(fs)
     n_qpoints = getnquadpoints(fs)
@@ -18,7 +18,6 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{1,T}, mesh::PolygonalMesh, faces
     k = 0
     for (face_idx, face) in enumerate(get_faces(mesh))
         if face_idx ∈ faceset
-            println(face_idx)
             @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
             cell = mesh.cells[face.cells[1]]
             face_lidx = find(x -> x == face_idx,cell.faces)[1]

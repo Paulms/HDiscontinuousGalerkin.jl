@@ -67,5 +67,6 @@ export spatial_coordinate, reference_coordinate
 
 #Discrete Functions
 export TrialFunction
+export errornorm
 
 end # module

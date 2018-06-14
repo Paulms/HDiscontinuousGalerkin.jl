@@ -56,9 +56,8 @@ f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
 # Now we have all the pieces needed to assemble the linear system, $K u = f$.
-function doassemble()
+function doassemble(Vh, Wh, Mh, τ = 1)
     # Allocate Matrices
-    τ = 1
     n_basefuncs = getnbasefunctions(Vh)
     n_basefuncs_s = getnbasefunctions(Wh)
     n_basefuncs_t = getnbasefunctions(Mh)
@@ -107,7 +106,7 @@ function doassemble()
             dΩ = getdetJdV(Wh, cell_idx, q_point)
             for i in 1:n_basefuncs_s
                 w  = shape_value(Wh, q_point, i)
-                fh = function_value(ff, cell_idx,q_point)
+                fh = value(ff, cell_idx,q_point)
                 # Integral f*u dΩ
                 be[i] += fh*w*dΩ
             end
@@ -184,15 +183,17 @@ function doassemble()
     end
     return end_assemble(assembler), rhs, K_element, b_element
 end
-function get_uandσ!(σ_h,u_h,û, K_e, b_e, mesh)
+
+function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
     n_cells = numcells(mesh)
     n_basefuncs = getnbasefunctions(σ_h)
     n_basefuncs_t = getnbasefunctions(Mh)
     for cell_idx in 1:numcells(mesh)
         #get dofs
         û_e = Vector{Float64}()
-        for face in mesh.cells[cell_idx].faces
+        for (k,face) in enumerate(mesh.cells[cell_idx].faces)
             push!(û_e, û[n_basefuncs_t*face-1:n_basefuncs_t*face]...)
+            û_h.m_values[cell_idx,:,k] = û[n_basefuncs_t*face-1:n_basefuncs_t*face]
         end
         dof = K_e[cell_idx]*û_e+b_e[cell_idx]
         σ_h.m_values[cell_idx,:] = dof[1:n_basefuncs]
@@ -202,18 +203,18 @@ end
 #md nothing # hide
 
 ### Solution of the system
-K, b, K_e, b_e = doassemble();
+K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
 
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
 apply!(K,b,dbc)
 û = K \ b;
-
 #Now we recover original variables from skeleton û
+û_h = TrialFunction(Mh, mesh)
 σ_h = TrialFunction(Vh, mesh)
 u_h = TrialFunction(Wh, mesh)
-get_uandσ!(σ_h, u_h,û, K_e, b_e, mesh)
+get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)

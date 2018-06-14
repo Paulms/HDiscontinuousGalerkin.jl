@@ -33,6 +33,7 @@ end
 @inline geometric_face_value(fs::ScalarFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.L[base_func, q_point, face]
 @inline getdim(::ScalarFunctionSpace{dim}) where {dim} = dim
 @inline reference_coordinate(fs::ScalarFunctionSpace{dim,T},cell::Int, mesh::PolygonalMesh, x::Vec{dim,T}) where {dim,T} = fs.Jinv[cell]⋅(x-mesh.nodes[mesh.cells[cell].nodes[1]].x)
+@inline get_interpolation(fs::ScalarFunctionSpace) = fs.interpolation
 
 """
     getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
@@ -219,10 +220,10 @@ function VectorFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{d
 end
 
 # Scalar Trace Function Space (Scalar functions defined only on cell boundaries)
-struct ScalarTraceFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape, order} <: DiscreteFunctionSpace{dim,T,refshape}
+struct ScalarTraceFunctionSpace{dim,T<:Real,fdim,NN,refshape<:AbstractRefShape, order} <: DiscreteFunctionSpace{dim,T,refshape}
     N::Matrix{T}
     L::Array{T,3}
-    dNdξ::Matrix{Vec{dim,T}}
+    dNdξ::Matrix{Vec{fdim,T}}
     detJ::Vector{Matrix{T}}
     qr_weights::Vector{T}
 end
@@ -240,11 +241,10 @@ function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, q_point::Int, x::
 Map coordinates of quadrature point `q_point` of Scalar Trace Function Space `fs`
 into domain with vertices `x`
 """
-function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim2,T}}, orientation=true) where {dim,dim2,T}
-    @assert dim2 == dim + 1
+function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true) where {dim,T}
     n_base_funcs = getngeobasefunctions(fs)
     @assert length(x) == n_base_funcs
-    vec = zero(Vec{dim2,T})
+    vec = zero(Vec{dim,T})
     n = getnquadpoints(fs)
     @inbounds for i in 1:n_base_funcs
         or_q_point = orientation ? q_point : n - q_point + 1
@@ -277,5 +277,5 @@ function ScalarTraceFunctionSpace(::Type{T}, NN, func_interpol::Interpolation{di
             N[i, qp] = value(func_interpol, i, ξ)
         end
     end
-    ScalarTraceFunctionSpace{dim,T,NN,refshape, order}(N, L, dNdξ,detJ, qr_weights)
+    ScalarTraceFunctionSpace{dim+1,T,dim,NN,refshape, order}(N, L, dNdξ,detJ, qr_weights)
 end
