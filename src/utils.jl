@@ -35,3 +35,17 @@ function integrate(f::Function,qr::QuadratureRule)
     end
     int_val
 end
+
+@static if VERSION < v"0.7.0-DEV.2563"
+    const ht_keyindex2! = Base.ht_keyindex2
+else
+    import Base.ht_keyindex2!
+end
+
+mutable struct ScalarWrapper{T}
+    x::T
+end
+
+@inline Base.getindex(s::ScalarWrapper) = s.x
+@inline Base.setindex!(s::ScalarWrapper, v) = s.x = v
+Base.copy(s::ScalarWrapper{T}) where {T} = ScalarWrapper{T}(copy(s.x))

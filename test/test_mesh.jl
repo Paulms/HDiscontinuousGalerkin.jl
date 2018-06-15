@@ -6,7 +6,7 @@ root_file = "mesh/figure2.1"
 mesh = parse_mesh_triangle(root_file)
 
 # General checks
-@test numcells(mesh) == 4
+@test getncells(mesh) == 4
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/4
 end
@@ -20,7 +20,7 @@ end
 
 #Test generated mesh
 mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
-@test numcells(mesh) == 8
+@test getncells(mesh) == 8
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/8
 end

@@ -4,8 +4,8 @@ struct Dirichlet{T}  #<: Constraint
     values::Vector{T}
 end
 
-function Dirichlet(fs::DiscreteFunctionSpace, mesh::PolygonalMesh, faceset::String,f::Function)
-    Dirichlet(fs, mesh, get_faceset(mesh, faceset), f)
+function Dirichlet(u::TrialFunction, mesh::PolygonalMesh, faceset::String,f::Function)
+    Dirichlet(getfunctionspace(u), mesh, get_faceset(mesh, faceset), f)
 end
 
 function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faceset::Set{Int},f::Function) where {T}
@@ -32,6 +32,73 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
                 end
                 values[k] = N
                 prescribed_dofs[k] = face_idx*n_dof-n_dof + i
+            end
+        end
+    end
+    return Dirichlet(prescribed_dofs, values)
+end
+
+function Dirichlet(u::TrialFunction, dh::DofHandler, faceset::String,f::Function)
+    Dirichlet(u, dh, get_faceset(dh.mesh, faceset), f)
+end
+
+function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::Set{Int}, f::Function) where {T,refshape}
+    fi = find_field(dh, field)
+    fs = getfunctionspace(field)
+    #compute total number of dofs
+    n_qpoints = getnquadpoints(fs)
+    n_max_topology_elements = maximum(keys(get_topology(refshape, Val{2})))
+    nelementdofs = Int[]
+    ncellelementdofs = Int[]
+    # Compute dofs for element and total element dofs for cell
+    for n_element in 0:n_max_topology_elements-1
+        n_el_dofs_cell = get_topology(get_interpolation(fs))[n_element]
+        n_el_cell = get_topology(getrefshape(field), Val{2})[n_element]
+        @assert mod(n_el_dofs_cell, n_el_cell) == 0
+        push!(nelementdofs,Int(n_el_dofs_cell/n_el_cell))
+        push!(ncellelementdofs,n_el_dofs_cell)
+    end
+
+    nt_cell_dofs = ndofs_per_cell(dh)
+    prescribed_dofs = Vector{Int}()
+    values = Vector{T}()
+    for (face_idx, face) in enumerate(get_faces(dh.mesh))
+        if face_idx ∈ faceset
+            @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
+            cell = dh.mesh.cells[face.cells[1]]
+            cell_idx = face.cells[1]
+            face_lidx = find(x -> x == face_idx,cell.faces)[1]
+            l_dof = Int[]
+            offset::Int = (cell_idx-1)*nt_cell_dofs + field_offset(dh, field)
+            for j = 1:2 #Add vertex dofs
+                local_offset::Int = reference_edge_nodes(refshape,Val{2})[face_lidx][j]
+                if !(offset+local_offset ∈ prescribed_dofs)
+                    push!(prescribed_dofs, offset+local_offset)
+                    push!(l_dof, local_offset)
+                end
+            end
+            for j in 1:nelementdofs[2]  #Add face dofs
+                local_offset::Int = ncellelementdofs[1] + nelementdofs[2]*(facel_lidx-1) + j
+                if !(offset+local_offset ∈ prescribed_dofs)
+                    push!(prescribed_dofs, offset+local_offset)
+                    push!(l_dof, local_offset)
+                end
+            end
+            #Add cell dofs
+            local_offset::Int = ncellelementdofs[1] + ncellelementdofs[2] + j
+            if !(offset+local_offset ∈ prescribed_dofs)
+                push!(prescribed_dofs, offset+local_offset)
+                push!(l_dof, local_offset)
+            end
+            #Solve system ∫ k ϕiϕj = ∫ f ϕi  we assume basis is orthogonal
+            orientation = face_orientation(cell, face_lidx)
+            coords = get_coordinates(cell, dh.mesh)
+            for i in l_dof
+                N = zero(T)
+                for q_point in 1:n_qpoints
+                    N += fs.qr_weights[q_point]*f(spatial_coordinate(fs, face_lidx, q_point, coords, orientation))*shape_value(fs,q_point,i)
+                end
+                push!(values,N)
             end
         end
     end

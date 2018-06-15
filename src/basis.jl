@@ -219,7 +219,6 @@ end
 Compute the gradient of dubiner basis `j` at point (x,y)
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-#TODO: It could be better to return a tensor
 function ∇dubiner_basis(x,y,j::Integer)
     #Compute degrees
     t=-3/2+(1/2)*sqrt(1+8*j)
@@ -234,30 +233,34 @@ end
 ####################
 struct Lagrange{dim,shape,order,T} <: Interpolation{dim,shape,order}
     nodal_base_coefs::T
+    topology::Dict{Int,Int}
 end
 
 function Lagrange{1,shape,order}() where {shape, order}
-    nodals=[x->x(point) for point in get_nodal_points(shape(), Val{1}, order)]
+    nodal_points, topology = get_nodal_points(shape, Val{1}, order)
+    nodals=[x->x(point) for point in nodal_points]
     ip_prime = Legendre{1,shape,order}()
     nbasefuncs = getnbasefunctions(ip_prime)
     prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
     V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
     nodal_base_coefs = inv(V)
-    Lagrange{1, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs)
+    Lagrange{1, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs, topology)
 end
 
 function Lagrange{2,shape,order}() where {shape, order}
-    nodals=[x->x(point) for point in get_nodal_points(shape(), Val{2}, order)]
+    nodal_points, topology = get_nodal_points(shape, Val{2}, order)
+    nodals=[x->x(point) for point in nodal_points]
     ip_prime = Dubiner{2,shape,order}()
     nbasefuncs = getnbasefunctions(ip_prime)
     prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
     V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
     nodal_base_coefs = inv(V)
-    Lagrange{2, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs)
+    Lagrange{2, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs, topology)
 end
 
-getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
-getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
+@inline getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
+@inline getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
+@inline get_topology(ip::Lagrange{dim,RefTetrahedron,order}) where {dim,order} = ip.topology
 
 """
 return interpolator of the same type with dim = dim -1

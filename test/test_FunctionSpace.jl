@@ -16,6 +16,12 @@ dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
+
+# Variables
+û_h = TrialFunction(Mh, mesh)
+σ_h = TrialFunction(Vh, mesh)
+u_h = TrialFunction(Wh, mesh)
+
 # Basic Test
 @test sum(Vh.ssp.detJ) ≈ 2.0
 for i in 1:4
@@ -35,7 +41,8 @@ const sq3 = sqrt(3)
 @test Wh.detJf[4] ≈ [sq2/2,sq2/2,1]
 
 # ### Boundary conditions
-dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
+dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
+
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh, mesh)
@@ -85,10 +92,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     # create a matrix assembler and rhs vector
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
-    K_element = Array{AbstractMatrix{Float64}}(numcells(mesh))
-    b_element = Array{AbstractVector{Float64}}(numcells(mesh))
+    K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
+    b_element = Array{AbstractVector{Float64}}(getncells(mesh))
 
-    for cell_idx in 1:numcells(mesh)
+    for cell_idx in 1:getncells(mesh)
         fill!(Ae, 0)
         fill!(Be, 0)
         fill!(Ce, 0)
@@ -212,10 +219,10 @@ apply!(K,b,dbc)
 û = K \ b;
 #Now we recover original variables from skeleton û
 function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
-    n_cells = numcells(mesh)
+    n_cells = getncells(mesh)
     n_basefuncs = getnbasefunctions(σ_h)
     n_basefuncs_t = getnbasefunctions(Mh)
-    for cell_idx in 1:numcells(mesh)
+    for cell_idx in 1:getncells(mesh)
         #get dofs
         û_e = Vector{Float64}()
         for (k,face) in enumerate(mesh.cells[cell_idx].faces)
@@ -228,9 +235,6 @@ function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
     end
 end
 
-û_h = TrialFunction(Mh, mesh)
-σ_h = TrialFunction(Vh, mesh)
-u_h = TrialFunction(Wh, mesh)
 get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
