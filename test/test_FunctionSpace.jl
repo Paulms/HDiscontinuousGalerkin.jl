@@ -23,6 +23,9 @@ Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 u_h = TrialFunction(Wh, mesh)
 
 # Basic Test
+@test getnlocaldofs(Vh) == 6
+@test getnlocaldofs(Wh) == 3
+@test getnlocaldofs(Mh) == 6
 @test sum(Vh.ssp.detJ) ≈ 2.0
 for i in 1:4
     @test getdetJdV(Wh,i,1)/Wh.qr_weights[1] ≈ 0.5

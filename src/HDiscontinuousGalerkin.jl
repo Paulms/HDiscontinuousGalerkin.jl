@@ -75,6 +75,7 @@ export getnfacequadpoints, getdetJdS
 export face_shape_value
 export InterpolatedFunction, function_value, interpolate
 export spatial_coordinate, reference_coordinate
+export getnlocaldofs
 
 #Discrete Functions
 export TrialFunction
@@ -84,5 +85,6 @@ export errornorm
 export DofHandler, ndofs, ndofs_per_cell, celldofs!
 export close!
 export create_sparsity_pattern, reconstruct!
+export dof_range
 
 end # module

@@ -7,6 +7,7 @@ mesh = parse_mesh_triangle(root_file)
 
 # General checks
 @test getncells(mesh) == 4
+@test getnnodes(mesh) == 5
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/4
 end
@@ -17,6 +18,7 @@ end
 @test mesh.cells[1].normals ≈ [Vec{2}([-sqrt(2)/2,sqrt(2)/2]), Vec{2}([-sqrt(2)/2,-sqrt(2)/2]), Vec{2}([1.0,0.0])]
 @test cell_diameter(mesh,1) == 1.0
 @test get_faceset(mesh, "boundary") == Set([3,6,7,8])
+@test get_coordinates(mesh.faces[1], mesh) == [Vec{2}([1.0, 1.0]), Vec{2}([0.5, 0.5])]
 
 #Test generated mesh
 mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))

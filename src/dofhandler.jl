@@ -163,12 +163,6 @@ function celldofs!(global_dofs::Vector{Int}, dh::DofHandler, i::Int)
     return global_dofs
 end
 
-function celldofs(dh::DofHandler, i::Int)
-    @assert isclosed(dh)
-    unsafe_copy!(global_dofs, 1, dh.cell_dofs, dh.cell_dofs_offset[i], length(global_dofs))
-    return dh.cell_dofs[dh.cell_dofs_offset[i]:dh.cell_dofs, dh.cell_dofs_offset[i]+ndofs_per_cell(dh, i)]
-end
-
 # Creates a sparsity pattern from the dofs in a DofHandler.
 # Returns a sparse matrix with the correct storage pattern.
 """
@@ -241,24 +235,4 @@ function reconstruct!(field::TrialFunction, u::AbstractVector{T}, dh::DofHandler
         n_dofs = offset + getnlocaldofs(field) - 1
         field.m_values[cell_idx,:] = u[dh.cell_dofs[offset:n_dofs]]
     end
-end
-
-# dof renumbering
-"""
-    renumber!(dh::DofHandler, perm)
-
-Renumber the degrees of freedom in the DofHandler according to the
-permuation `perm`.
-
-!!! warning
-    Remember to do renumbering *before* adding boundary conditions,
-    otherwise the mapping for the dofs will be wrong.
-"""
-function renumber!(dh::DofHandler, perm::AbstractVector{<:Integer})
-    @assert isperm(perm) && length(perm) == ndofs(dh)
-    cell_dofs = dh.cell_dofs
-    for i in eachindex(cell_dofs)
-        cell_dofs[i] = perm[cell_dofs[i]]
-    end
-    return dh
 end
