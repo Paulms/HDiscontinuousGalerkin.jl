@@ -51,10 +51,9 @@ u_h = TrialFunction(Wh, mesh)
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
-@time ff = interpolate(f, Wh, mesh)
 # ### Assembling the linear system
 # Now we have all the pieces needed to assemble the linear system, $K û = f$.
-function doassemble(Vh, Wh, Mh, τ = 1)
+function doassemble(Vh, Wh, Mh, τ = 1.0)
     # Allocate Matrices
     n_basefuncs = getnbasefunctions(Vh)
     n_basefuncs_s = getnbasefunctions(Wh)
@@ -70,6 +69,9 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     # create a matrix assembler and rhs vector
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    fill!(rhs,0.0)
+    ff = interpolate(f, Wh, mesh)
+
     # Preallocate vectors to store data for u and σ recovery
     K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
     b_element = Array{AbstractVector{Float64}}(getncells(mesh))
@@ -208,6 +210,8 @@ end
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
 @time apply!(K,b,dbc)
+#using IterativeSolvers
+#û = gmres(K,b)
 û = K \ b;
 
 #Now we recover original variables from skeleton û
@@ -215,7 +219,7 @@ end
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)
-Etu_h <= 0.00005
+Etu_h <= 0.00006
 
 #Plot mesh
 using PyCall

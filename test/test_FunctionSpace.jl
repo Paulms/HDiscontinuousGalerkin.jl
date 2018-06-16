@@ -92,6 +92,7 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     # create a matrix assembler and rhs vector
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    fill!(rhs,0)
     K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
     b_element = Array{AbstractVector{Float64}}(getncells(mesh))
 

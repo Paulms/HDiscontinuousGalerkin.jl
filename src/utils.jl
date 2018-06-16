@@ -49,3 +49,9 @@ end
 @inline Base.getindex(s::ScalarWrapper) = s.x
 @inline Base.setindex!(s::ScalarWrapper, v) = s.x = v
 Base.copy(s::ScalarWrapper{T}) where {T} = ScalarWrapper{T}(copy(s.x))
+
+#See zchop.jl
+zcheck(x::T, eps=1e-14) where {T<:Real} =
+    abs(x) > convert(T,eps) ? x : zero(T)
+zcheck!(a::T, eps=1e-14) where {T<:AbstractArray} =
+    (@inbounds for i in 1:length(a) a[i] = zcheck(a[i],eps) end ; a)

@@ -62,7 +62,7 @@ export getorder, getlowerdiminterpol
 export get_topology, get_interpolation
 
 #utils
-export get_affine_map, integrate
+export get_affine_map, integrate, zcheck!, zcheck
 
 #Assembler
 export start_assemble, assemble!, end_assemble
