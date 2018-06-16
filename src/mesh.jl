@@ -35,13 +35,13 @@ end
 struct Face{T <: Int}
     cells::Vector{T}
     nodes::Vector{T}
-    ref::Int64  #To check if is belongs to the boundary
+    ref::T  #To check if is belongs to the boundary
 end
-struct PolygonalMesh{dims,Type} <: AbstractPolygonalMesh
-    cells::Vector{Cell}
+struct PolygonalMesh{dims,Type, T <: Int} <: AbstractPolygonalMesh
+    cells::Vector{Cell{T,dims,Type}}
     nodes::Vector{Node{dims,Type}}
-    faces::Vector{Face}
-    facesets::Dict{String,Set{Int}}
+    faces::Vector{Face{T}}
+    facesets::Dict{String,Set{T}}
 end
 function get_maxnfaces(mesh::PolygonalMesh)
     nmax = 0

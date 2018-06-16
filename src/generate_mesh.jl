@@ -146,5 +146,5 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     end
     facesets = Dict("bottom"=>bottomSet, "right"=>rightSet,"left"=>leftSet,
                     "top"=>topSet,"boundary"=>union(bottomSet,rightSet,leftSet,topSet))
-    return PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x)}(cells, nodes, ref_faces, facesets)
+    return PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x),eltype(bottomSet)}(cells, nodes, ref_faces, facesets)
 end

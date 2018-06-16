@@ -52,7 +52,7 @@ end
     assemble!(g, ge, edof)
 Assembles the element residual `ge` into the global residual vector `g`.
 """
-function assemble!(g::AbstractVector{T}, edof::AbstractVector{Int}, ge::AbstractVector{T}) where {T}
+@propagate_inbounds function assemble!(g::AbstractVector{T}, edof::AbstractVector{Int}, ge::AbstractVector{T}) where {T}
     @boundscheck checkbounds(g, edof)
     @inbounds for i in 1:length(edof)
         g[edof[i]] += ge[i]

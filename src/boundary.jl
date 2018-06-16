@@ -17,6 +17,7 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
     values = Vector{T}(n_faces*n_dof)
     k = 0
     for (face_idx, face) in enumerate(get_faces(mesh))
+        let face_idx::Int = face_idx
         if face_idx ∈ faceset
             @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
             cell = mesh.cells[face.cells[1]]
@@ -33,6 +34,7 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
                 values[k] = N
                 prescribed_dofs[k] = face_idx*n_dof-n_dof + i
             end
+        end
         end
     end
     return Dirichlet(prescribed_dofs, values)

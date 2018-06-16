@@ -42,7 +42,7 @@ Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
 # Declare variables
-û_h = TrialFunction(Mh, mesh)
+@time û_h = TrialFunction(Mh, mesh)
 σ_h = TrialFunction(Vh, mesh)
 u_h = TrialFunction(Wh, mesh)
 
