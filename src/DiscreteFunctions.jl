@@ -79,14 +79,14 @@ function TrialFunction(fs::VectorFunctionSpace{dim,T}, mesh::PolygonalMesh) wher
     return TrialFunction(fs, m_values, f_node, dim)
 end
 
-function TrialFunction(fs::DiscreteFunctionSpace{dim}, m_values::Matrix{T}, mesh::PolygonalMesh) where {dim,T}
+function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values::Array{T,N}, mesh::PolygonalMesh) where {dim,T,N}
     @assert size(m_values,1) == getncells(mesh)
     @assert size(m_values,2) == getnbasefunctions(fs)
     f_node = Vector{Vec{dim,T}}(getncells(mesh))
     for (k,cell) in enumerate(mesh.cells)
         f_node[k] = mesh.nodes[cell.nodes[1]].x
     end
-    return TrialFunction(fs, m_values, f_node)
+    return TrialFunction(fs, m_values, f_node, components)
 end
 
 """

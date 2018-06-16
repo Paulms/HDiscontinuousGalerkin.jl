@@ -16,6 +16,7 @@ struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,fdim,order,
 end
 
 @inline getngeobasefunctions(fs::ScalarFunctionSpace) = size(fs.M, 1)
+@inline getngeofasebasefunctions(fs::ScalarFunctionSpace) = size(fs.L, 1)
 @inline getnquadpoints(fs::ScalarFunctionSpace) = length(fs.qr_weights)
 @inline getnfacequadpoints(fs::ScalarFunctionSpace) = length(fs.qr_face_weigths)
 @inline getnbasefunctions(fs::ScalarFunctionSpace) = size(fs.N,1)
@@ -44,6 +45,23 @@ cell `cell` of the `ScalarFunctionSpace` object.
 """
 @inline get_normal(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, qp::Int) where {dim,T} = fs.normals[qp, cell, face, qp]
 @inline get_normal(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int) where {dim,T} = fs.normals[qp, cell, face]
+
+"""
+function spatial_coordinate(fs::ScalarFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true)
+Map coordinates of face quadrature point `q_point` of Scalar Function Space `fs`
+into domain with vertices `x`
+"""
+function spatial_coordinate(fs::ScalarFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true) where {dim,T}
+    n_base_funcs = getngeofasebasefunctions(fs)
+    @assert length(x) == n_base_funcs
+    vec = zero(Vec{dim,T})
+    n = getnfacequadpoints(fs)
+    @inbounds for i in 1:n_base_funcs
+        or_q_point = orientation ? q_point : n - q_point + 1
+        vec += geometric_face_value(fs, face, or_q_point, i) * x[i]
+    end
+    return vec
+end
 
 function ScalarFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
     quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}

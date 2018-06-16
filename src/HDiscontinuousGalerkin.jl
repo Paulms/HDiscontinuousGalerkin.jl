@@ -35,7 +35,7 @@ export getncells, numfaces, get_maxnfaces, get_normal
 export face_orientation, get_faceset
 export rectangle_mesh
 export TriangleCell
-export reference_edge_nodes
+export reference_edge_nodes, getnnodes
 
 # Boundaries
 export Dirichlet
@@ -83,6 +83,6 @@ export errornorm
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!
 export close!
-export create_sparsity_pattern
+export create_sparsity_pattern, reconstruct!
 
 end # module

@@ -30,7 +30,7 @@ using Tensors
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
-mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
 dim = 2
@@ -132,13 +132,29 @@ K, b = doassemble(Wh, K, dh);
 apply!(K,b,dbc)
 u = K \ b;
 
+reconstruct!(u_h, u, dh)
+
 # ### Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)
-#Etu_h <= 0.00005
+Etu_h <= 0.0002
 
 # ### Plot Solution
-# We need avg since u_h is discontinuous
+#Plot mesh
+using PyCall
+using PyPlot
+@pyimport matplotlib.tri as mtri
+triangles = Matrix{Int}(getncells(mesh), 3)
+m_nodes = Matrix{Float64}(length(mesh.nodes),dim)
+for (k,node) in enumerate(mesh.nodes)
+    m_nodes[k,:] = node.x
+end
+for k = 1:getncells(mesh)
+    triangles[k,:] = mesh.cells[k].nodes-1
+end
+triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+PyPlot.triplot(triang, "ko-")
+
 nodalu_h = Vector{Float64}(length(mesh.nodes))
 share_count = zeros(Int,length(mesh.nodes))
 fill!(nodalu_h,0)
@@ -150,4 +166,7 @@ for (k,cell) in enumerate(mesh.cells)
     end
 end
 nodalu_h = nodalu_h./share_count
-PyPlot.tricontourf(triang, nodalu_h)
+u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
+nodalu_h
+nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
+PyPlot.tricontourf(triang, nuh)

@@ -51,6 +51,7 @@ function get_maxnfaces(mesh::PolygonalMesh)
     nmax
 end
 @inline numfaces(mesh::PolygonalMesh) = length(mesh.faces)
+@inline getnnodes(mesh::PolygonalMesh) = length(mesh.nodes)
 @inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
 @inline get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
 @inline get_coordinates(face::Face, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in face.nodes]

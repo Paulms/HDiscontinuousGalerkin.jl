@@ -234,6 +234,15 @@ function _create_sparsity_pattern(dh::DofHandler, sym::Bool)
     return K
 end
 
+# Reconstruct TrialFunctions
+function reconstruct!(field::TrialFunction, u::AbstractVector{T}, dh::DofHandler) where {T}
+    for cell_idx in 1:getncells(dh.mesh)
+        offset = field_offset(dh,field) + dh.cell_dofs_offset[cell_idx]
+        n_dofs = offset + getnlocaldofs(field) - 1
+        field.m_values[cell_idx,:] = u[dh.cell_dofs[offset:n_dofs]]
+    end
+end
+
 # dof renumbering
 """
     renumber!(dh::DofHandler, perm)

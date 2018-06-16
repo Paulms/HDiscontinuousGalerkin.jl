@@ -78,7 +78,7 @@ end
 function volume(verts::Vector{Vec{N, T}}) where {N,T}
     # Volume of reference simplex element is 1/n!
     n = length(verts) - 1
-    ref_verts = reference_coordinates(RefTetrahedron(), Val{n})
+    ref_verts = reference_coordinates(RefTetrahedron, Val{n})
     A, b = get_affine_map(ref_verts, verts)
     F = svd(A)
     return *(F[2]...)/factorial(n)
