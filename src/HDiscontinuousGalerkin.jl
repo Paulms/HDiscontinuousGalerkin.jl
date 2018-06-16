@@ -2,6 +2,7 @@ module HDiscontinuousGalerkin
 
 using Tensors
 using FastGaussQuadrature
+import Base:@propagate_inbounds
 
 abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
@@ -20,18 +21,21 @@ include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 include("FunctionSpace.jl")
 include("assembler.jl")
-include("boundary.jl")
 include("DiscreteFunctions.jl")
+include("dofhandler.jl")
+include("boundary.jl")
+
 
 # Function exports
 # mesh
 export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
-export numcells, numfaces, get_maxnfaces, get_normal
+export getncells, numfaces, get_maxnfaces, get_normal
 export face_orientation, get_faceset
 export rectangle_mesh
 export TriangleCell
+export reference_edge_nodes, getnnodes
 
 # Boundaries
 export Dirichlet
@@ -39,6 +43,8 @@ export apply!
 
 # Shapes
 export get_nodal_points, volume
+export get_num_faces
+export get_num_vertices
 
 # Quadratures
 export QuadratureRule
@@ -53,6 +59,7 @@ export value, derivative, gradient_value
 export getnbasefunctions
 export get_default_geom_interpolator
 export getorder, getlowerdiminterpol
+export get_topology, get_interpolation
 
 #utils
 export get_affine_map, integrate
@@ -72,5 +79,10 @@ export spatial_coordinate, reference_coordinate
 #Discrete Functions
 export TrialFunction
 export errornorm
+
+#Handlers
+export DofHandler, ndofs, ndofs_per_cell, celldofs!
+export close!
+export create_sparsity_pattern, reconstruct!
 
 end # module

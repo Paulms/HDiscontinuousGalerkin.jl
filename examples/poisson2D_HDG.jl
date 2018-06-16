@@ -41,8 +41,13 @@ dim = 2
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
+# Declare variables
+û_h = TrialFunction(Mh, mesh)
+σ_h = TrialFunction(Vh, mesh)
+u_h = TrialFunction(Wh, mesh)
+
 # ### Boundary conditions
-@time dbc = Dirichlet(Mh, mesh, "boundary", x -> 0)
+@time dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -66,10 +71,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
     # Preallocate vectors to store data for u and σ recovery
-    K_element = Array{AbstractMatrix{Float64}}(numcells(mesh))
-    b_element = Array{AbstractVector{Float64}}(numcells(mesh))
+    K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
+    b_element = Array{AbstractVector{Float64}}(getncells(mesh))
 
-    for cell_idx in 1:numcells(mesh)
+    for cell_idx in 1:getncells(mesh)
         fill!(Ae, 0)
         fill!(Be, 0)
         fill!(Ce, 0)
@@ -179,10 +184,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
 end
 
 function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
-    n_cells = numcells(mesh)
+    n_cells = getncells(mesh)
     n_basefuncs = getnbasefunctions(σ_h)
     n_basefuncs_t = getnbasefunctions(Mh)
-    for cell_idx in 1:numcells(mesh)
+    for cell_idx in 1:getncells(mesh)
         #get dofs
         û_e = Vector{Float64}()
         for (k,face) in enumerate(mesh.cells[cell_idx].faces)
@@ -204,10 +209,8 @@ end
 # we can get the correct solution vector `u` by using `\`.
 @time apply!(K,b,dbc)
 û = K \ b;
+
 #Now we recover original variables from skeleton û
-û_h = TrialFunction(Mh, mesh)
-σ_h = TrialFunction(Vh, mesh)
-u_h = TrialFunction(Wh, mesh)
 @time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
@@ -218,12 +221,12 @@ Etu_h <= 0.00005
 using PyCall
 using PyPlot
 @pyimport matplotlib.tri as mtri
-triangles = Matrix{Int}(numcells(mesh), 3)
+triangles = Matrix{Int}(getncells(mesh), 3)
 m_nodes = Matrix{Float64}(length(mesh.nodes),dim)
 for (k,node) in enumerate(mesh.nodes)
     m_nodes[k,:] = node.x
 end
-for k = 1:numcells(mesh)
+for k = 1:getncells(mesh)
     triangles[k,:] = mesh.cells[k].nodes-1
 end
 triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)

@@ -4,8 +4,8 @@ struct Dirichlet{T}  #<: Constraint
     values::Vector{T}
 end
 
-function Dirichlet(fs::DiscreteFunctionSpace, mesh::PolygonalMesh, faceset::String,f::Function)
-    Dirichlet(fs, mesh, get_faceset(mesh, faceset), f)
+function Dirichlet(u::TrialFunction, mesh::PolygonalMesh, faceset::String,f::Function)
+    Dirichlet(getfunctionspace(u), mesh, get_faceset(mesh, faceset), f)
 end
 
 function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faceset::Set{Int},f::Function) where {T}
@@ -36,6 +36,66 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
         end
     end
     return Dirichlet(prescribed_dofs, values)
+end
+
+function Dirichlet(u::TrialFunction, dh::DofHandler, faceset::String,f::Function)
+    Dirichlet(u, dh, get_faceset(dh.mesh, faceset), f)
+end
+
+#TODO: only works for nodal basis
+function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::Set{Int}, f::Function) where {T,refshape}
+    fi = find_field(dh, field)
+    fs = getfunctionspace(field)
+    #compute total number of dofs
+    n_qpoints = getnquadpoints(fs)
+    n_max_topology_elements = maximum(keys(get_topology(refshape, Val{2})))
+    nelementdofs = Int[]
+    ncellelementdofs = Int[]
+    # Compute dofs for element and total element dofs for cell
+    for n_element in 0:n_max_topology_elements-1
+        n_el_dofs_cell = get_topology(get_interpolation(fs))[n_element]
+        n_el_cell = get_topology(getrefshape(field), Val{2})[n_element]
+        @assert mod(n_el_dofs_cell, n_el_cell) == 0
+        push!(nelementdofs,Int(n_el_dofs_cell/n_el_cell))
+        push!(ncellelementdofs,n_el_dofs_cell)
+    end
+
+    prescribed_dofs = Vector{Int}()
+    values = Vector{T}()
+    M = _get_nodal_transformation_matrix(get_interpolation(fs))
+    for (face_idx, face) in enumerate(get_faces(dh.mesh))
+        if face_idx ∈ faceset
+            @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
+            cell = dh.mesh.cells[face.cells[1]]
+            cell_idx = face.cells[1]
+            face_lidx = find(x -> x == face_idx,cell.faces)[1]
+            l_dof = Int[]
+            offset::Int = dh.cell_dofs_offset[cell_idx] - 1 + field_offset(dh, field)
+            for j = 1:2 #Add vertex dofs
+                local_offset::Int = reference_edge_nodes(refshape,Val{2})[face_lidx][j]
+                if !(dh.cell_dofs[offset+local_offset] ∈ prescribed_dofs)
+                    push!(prescribed_dofs, dh.cell_dofs[offset+local_offset])
+                    push!(l_dof, local_offset)
+                end
+            end
+            for j in 1:nelementdofs[2]  #Add face dofs
+                local_offset = ncellelementdofs[1] + nelementdofs[2]*(facel_lidx-1) + j
+                if !(dh.cell_dofs[offset+local_offset] ∈ prescribed_dofs)
+                    push!(prescribed_dofs, dh.cell_dofs[offset+local_offset])
+                    push!(l_dof, local_offset)
+                end
+            end
+            #TODO: We now assume a nodal base...
+            orientation = face_orientation(cell, face_lidx)
+            coords = get_coordinates(cell, dh.mesh)
+            for i in l_dof
+                push!(values,f(spatial_nodal_coordinate(get_interpolation(fs),M,i,coords)))
+            end
+        end
+    end
+    #now put all in order
+    p = sortperm(prescribed_dofs)
+    return Dirichlet(prescribed_dofs[p], values[p])
 end
 
 @enum(ApplyStrategy, APPLY_TRANSPOSE, APPLY_INPLACE)

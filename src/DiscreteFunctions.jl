@@ -26,7 +26,7 @@ function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::Polygona
 Interpolation of scalar functions f(x): x ∈ ℝⁿ ↦ ℝ on Scalar Function Space `fs`
 """
 function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-    n_cells = numcells(mesh)
+    n_cells = getncells(mesh)
     n_qpoints = getnquadpoints(fs)
     N = fill(zero(T)          * T(NaN), n_cells, n_qpoints)
     for (k,cell) in enumerate(get_cells(mesh))
@@ -43,36 +43,50 @@ struct TrialFunction{dim,T,refshape,N}
     fs::DiscreteFunctionSpace{dim,T,refshape}
     m_values::Array{T,N}
     f_node::Vector{Vec{dim,T}}
+    components::Int
 end
 
 @inline getnbasefunctions(u::TrialFunction) = getnbasefunctions(u.fs)
+@inline getfunctionspace(u::TrialFunction) = u.fs
+@inline getnlocaldofs(u::TrialFunction) = getnlocaldofs(getfunctionspace(u))
+@inline getrefshape(u::TrialFunction{dim,T,refshape}) where {dim,T,refshape} = refshape
+@inline getncomponents(u::TrialFunction) = u.components
 
 function TrialFunction(fs::ScalarTraceFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-    m_values = fill(zero(T) * T(NaN), numcells(mesh), getnbasefunctions(fs), get_maxnfaces(mesh))
-    f_node = Vector{Vec{dim,T}}(numcells(mesh))
+    m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs), get_maxnfaces(mesh))
+    f_node = Vector{Vec{dim,T}}(getncells(mesh))
     for (k,cell) in enumerate(mesh.cells)
         f_node[k] = mesh.nodes[cell.nodes[1]].x
     end
-    return TrialFunction(fs, m_values, f_node)
+    return TrialFunction(fs, m_values, f_node, 1)
 end
 
-function TrialFunction(fs::DiscreteFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-    m_values = fill(zero(T) * T(NaN), numcells(mesh), getnbasefunctions(fs))
-    f_node = Vector{Vec{dim,T}}(numcells(mesh))
+function TrialFunction(fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+    m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
+    f_node = Vector{Vec{dim,T}}(getncells(mesh))
     for (k,cell) in enumerate(mesh.cells)
         f_node[k] = mesh.nodes[cell.nodes[1]].x
     end
-    return TrialFunction(fs, m_values, f_node)
+    return TrialFunction(fs, m_values, f_node, 1)
 end
 
-function TrialFunction(fs::DiscreteFunctionSpace{dim}, m_values::Matrix{T}, mesh::PolygonalMesh) where {dim,T}
-    @assert size(m_values,1) == numcells(mesh)
+function TrialFunction(fs::VectorFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+    m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
+    f_node = Vector{Vec{dim,T}}(getncells(mesh))
+    for (k,cell) in enumerate(mesh.cells)
+        f_node[k] = mesh.nodes[cell.nodes[1]].x
+    end
+    return TrialFunction(fs, m_values, f_node, dim)
+end
+
+function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values::Array{T,N}, mesh::PolygonalMesh) where {dim,T,N}
+    @assert size(m_values,1) == getncells(mesh)
     @assert size(m_values,2) == getnbasefunctions(fs)
-    f_node = Vector{Vec{dim,T}}(numcells(mesh))
+    f_node = Vector{Vec{dim,T}}(getncells(mesh))
     for (k,cell) in enumerate(mesh.cells)
         f_node[k] = mesh.nodes[cell.nodes[1]].x
     end
-    return TrialFunction(fs, m_values, f_node)
+    return TrialFunction(fs, m_values, f_node, components)
 end
 
 """

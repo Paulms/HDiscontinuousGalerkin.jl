@@ -48,6 +48,8 @@ end
 ###########
 struct Dubiner{dim,shape,order} <: Interpolation{dim,shape,order} end
 
+isnodal(ip::Dubiner) = false
+
 getnbasefunctions(::Dubiner{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
 #nvertexdofs(::Dubiner{2,RefTetrahedron,order}) = 1
 
@@ -219,7 +221,6 @@ end
 Compute the gradient of dubiner basis `j` at point (x,y)
 on the reference triangle ((0,0),(1,0),(0,1))
 """
-#TODO: It could be better to return a tensor
 function ∇dubiner_basis(x,y,j::Integer)
     #Compute degrees
     t=-3/2+(1/2)*sqrt(1+8*j)
@@ -234,30 +235,35 @@ end
 ####################
 struct Lagrange{dim,shape,order,T} <: Interpolation{dim,shape,order}
     nodal_base_coefs::T
+    topology::Dict{Int,Int}
 end
 
-function Lagrange{1,shape,order}() where {shape, order}
-    nodals=[x->x(point) for point in get_nodal_points(shape(), Val{1}, order)]
-    ip_prime = Legendre{1,shape,order}()
+isnodal(ip::Lagrange) = true
+
+function getdafaultdualbasis(dim::Int,shape,order::Int)
+    if dim == 1
+        return Legendre{1,shape,order}()
+    elseif dim == 2
+        return Dubiner{2,shape,order}()
+    else
+        throw("Not dual basis available for dimension $dim")
+    end
+end
+
+function Lagrange{dim,shape,order}() where {dim,shape, order}
+    nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
+    nodals=[x->x(point) for point in nodal_points]
+    ip_prime = getdafaultdualbasis(dim,shape,order)
     nbasefuncs = getnbasefunctions(ip_prime)
     prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
     V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
     nodal_base_coefs = inv(V)
-    Lagrange{1, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs)
+    Lagrange{dim, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs, topology)
 end
 
-function Lagrange{2,shape,order}() where {shape, order}
-    nodals=[x->x(point) for point in get_nodal_points(shape(), Val{2}, order)]
-    ip_prime = Dubiner{2,shape,order}()
-    nbasefuncs = getnbasefunctions(ip_prime)
-    prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
-    V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
-    nodal_base_coefs = inv(V)
-    Lagrange{2, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs)
-end
-
-getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
-getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
+@inline getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
+@inline getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
+@inline get_topology(ip::Lagrange{dim,RefTetrahedron,order}) where {dim,order} = ip.topology
 
 """
 return interpolator of the same type with dim = dim -1
@@ -297,12 +303,40 @@ function gradient_value(ip::Lagrange{dim,RefTetrahedron,order}, k::Int, ξ::Vec{
     gradient(ξ -> value(ip, k, ξ), ξ)
 end
 
+function _get_nodal_transformation_matrix(fe::Lagrange{dim,shape,order}) where {dim,shape,order}
+    # Matrix to get spacial coordinates
+    nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
+    T = eltype(nodal_points[1])
+    geom_interpol = get_default_geom_interpolator(dim, shape)
+    qrs = QuadratureRule{dim,shape,T}(fill(T(NaN), length(nodal_points)), nodal_points) # weights will not be used
+    n_qpoints = length(getweights(qrs))
+    n_geom_basefuncs = getnbasefunctions(geom_interpol)
+    M =    fill(zero(T)           * T(NaN), n_geom_basefuncs, n_qpoints)
+    for (qp, ξ) in enumerate(qrs.points)
+        for i in 1:n_geom_basefuncs
+            M[i, qp] = value(geom_interpol, i, ξ)
+        end
+    end
+    M
+end
+
+function spatial_nodal_coordinate(fe::Lagrange, M::Matrix{T}, n_point::Int, x::AbstractVector{Vec{dim,T}}) where {dim,T}
+    n_base_funcs = size(M,1)
+    @assert length(x) == n_base_funcs
+    vec = zero(Vec{dim,T})
+    @inbounds for i in 1:n_base_funcs
+        vec += M[i, n_point] * x[i]
+    end
+    return vec
+end
+
 ####################
 # Legendre
 ####################
 struct Legendre{dim,shape,order} <: Interpolation{dim,shape,order} end
+isnodal(Legendre) = false
 
-getnbasefunctions(::Legendre{1,RefTetrahedron,order}) where {order} = order + 1
+@inline getnbasefunctions(::Legendre{1,RefTetrahedron,order}) where {order} = order + 1
 
 """
 value(ip::Legendre{1,RefTetrahedron,order}, j::Int, ξ::AbstactVector) where {order}

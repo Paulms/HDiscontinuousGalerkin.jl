@@ -16,6 +16,7 @@ struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,fdim,order,
 end
 
 @inline getngeobasefunctions(fs::ScalarFunctionSpace) = size(fs.M, 1)
+@inline getngeofasebasefunctions(fs::ScalarFunctionSpace) = size(fs.L, 1)
 @inline getnquadpoints(fs::ScalarFunctionSpace) = length(fs.qr_weights)
 @inline getnfacequadpoints(fs::ScalarFunctionSpace) = length(fs.qr_face_weigths)
 @inline getnbasefunctions(fs::ScalarFunctionSpace) = size(fs.N,1)
@@ -34,6 +35,8 @@ end
 @inline getdim(::ScalarFunctionSpace{dim}) where {dim} = dim
 @inline reference_coordinate(fs::ScalarFunctionSpace{dim,T},cell::Int, mesh::PolygonalMesh, x::Vec{dim,T}) where {dim,T} = fs.Jinv[cell]⋅(x-mesh.nodes[mesh.cells[cell].nodes[1]].x)
 @inline get_interpolation(fs::ScalarFunctionSpace) = fs.interpolation
+@inline getnlocaldofs(fs::ScalarFunctionSpace) = getnbasefunctions(fs)
+
 
 """
     getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
@@ -42,6 +45,23 @@ cell `cell` of the `ScalarFunctionSpace` object.
 """
 @inline get_normal(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, qp::Int) where {dim,T} = fs.normals[qp, cell, face, qp]
 @inline get_normal(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int) where {dim,T} = fs.normals[qp, cell, face]
+
+"""
+function spatial_coordinate(fs::ScalarFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true)
+Map coordinates of face quadrature point `q_point` of Scalar Function Space `fs`
+into domain with vertices `x`
+"""
+function spatial_coordinate(fs::ScalarFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true) where {dim,T}
+    n_base_funcs = getngeofasebasefunctions(fs)
+    @assert length(x) == n_base_funcs
+    vec = zero(Vec{dim,T})
+    n = getnfacequadpoints(fs)
+    @inbounds for i in 1:n_base_funcs
+        or_q_point = orientation ? q_point : n - q_point + 1
+        vec += geometric_face_value(fs, face, or_q_point, i) * x[i]
+    end
+    return vec
+end
 
 function ScalarFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
     quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}
@@ -62,7 +82,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
     face_quad_rule = create_face_quad_rule(face_quad_rule, func_interpol)
 
     n_qpoints = length(getpoints(quad_rule))
-    n_cells = numcells(mesh)
+    n_cells = getncells(mesh)
     n_faces = get_maxnfaces(mesh)
     isJconstant = (getorder(geom_interpol) == 1)
     NN = isJconstant ? 1 : 2
@@ -170,6 +190,8 @@ end
 @inline getnquadpoints(fs::VectorFunctionSpace) = length(fs.ssp.qr_weights)
 @inline getdetJdV(fs::VectorFunctionSpace, cell::Int, q_point::Int) = getdetJdV(fs.ssp, cell, q_point)
 @inline getnbasefunctions(fs::VectorFunctionSpace) = fs.n_dof
+@inline getnlocaldofs(fs::VectorFunctionSpace) = fs.n_dof
+@inline get_interpolation(fs::VectorFunctionSpace) = fs.ssp.interpolation
 
 function shape_value(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func::Int) where {dim,T}
     @assert 1 <= base_func <= fs.n_dof "invalid base function index: $base_func"
@@ -235,6 +257,7 @@ end
 @inline shape_value(fs::ScalarTraceFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
 @inline getngeobasefunctions(fs::ScalarTraceFunctionSpace) = size(fs.L,1)
 @inline geometric_value(fs::ScalarTraceFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.L[base_func, q_point, face]
+@inline getnlocaldofs(fs::ScalarTraceFunctionSpace) = getnbasefunctions(fs)*size(fs.L,3)
 
 """
 function spatial_coordinate(fs::ScalarTraceFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true)

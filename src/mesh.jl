@@ -22,6 +22,15 @@ end
 @inline numfaces(cell::Cell) = length(cell.faces)
 @inline get_normal(cell::Cell, face::Int) = cell.normals[face]
 @inline face_orientation(cell::Cell, face::Int) = cell.orientation[face]
+function topology_elements(cell::Cell,element::Int)
+    if element == 0
+        return cell.nodes
+    elseif element == 1
+        return cell.faces    #rename as edges
+    else
+        throw("Topology element of order $element not available for current mesh")
+    end
+end
 
 struct Face{T <: Int}
     cells::Vector{T}
@@ -42,6 +51,7 @@ function get_maxnfaces(mesh::PolygonalMesh)
     nmax
 end
 @inline numfaces(mesh::PolygonalMesh) = length(mesh.faces)
+@inline getnnodes(mesh::PolygonalMesh) = length(mesh.nodes)
 @inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
 @inline get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
 @inline get_coordinates(face::Face, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in face.nodes]
@@ -52,7 +62,7 @@ end
 @inline node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
 @inline node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
 @inline ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
-@inline numcells(mesh::PolygonalMesh) = length(mesh.cells)
+@inline getncells(mesh::PolygonalMesh) = length(mesh.cells)
 
 @inline nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
 @inline nodes(face::Face, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in face.nodes]

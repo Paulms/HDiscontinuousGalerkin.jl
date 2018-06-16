@@ -10,18 +10,20 @@ for j = 1:15
 end
 
 # Test nodal points for Lagrange base
-@test get_nodal_points(RefTetrahedron(), Val{2}, 1) == [Vec{2, Float64}((0.0, 0.0)),
-                                            Vec{2, Float64}((1.0, 0.0)),
-                                            Vec{2, Float64}((0.0, 1.0))]
-
-@test get_nodal_points(RefTetrahedron(), Val{2}, 2) == [Vec{2, Float64}((0.0, 0.0)),
-                                            Vec{2, Float64}((1.0, 0.0)),
-                                            Vec{2, Float64}((0.0, 1.0)),
-                                            Vec{2, Float64}((0.5, 0.5)),
-                                            Vec{2, Float64}((0.0, 0.5)),
-                                            Vec{2, Float64}((0.5, 0.0))]
-@test length(get_nodal_points(RefTetrahedron(), Val{2}, 3)) == 10
-@test get_nodal_points(RefTetrahedron(), Val{2}, 3)[10] ≈ Vec{2, Float64}((1/3, 1/3))
+nodal_points, topology = get_nodal_points(RefTetrahedron, Val{2}, 1)
+@test  nodal_points == [Vec{2, Float64}((0.0, 0.0)),
+                        Vec{2, Float64}((1.0, 0.0)),
+                        Vec{2, Float64}((0.0, 1.0))]
+nodal_points, topology = get_nodal_points(RefTetrahedron, Val{2}, 2)
+@test nodal_points == [Vec{2, Float64}((0.0, 0.0)),
+                        Vec{2, Float64}((1.0, 0.0)),
+                        Vec{2, Float64}((0.0, 1.0)),
+                        Vec{2, Float64}((0.5, 0.5)),
+                        Vec{2, Float64}((0.0, 0.5)),
+                        Vec{2, Float64}((0.5, 0.0))]
+nodal_points, topology = get_nodal_points(RefTetrahedron, Val{2}, 3)
+@test length(nodal_points) == 10
+@test nodal_points[10] ≈ Vec{2, Float64}((1/3, 1/3))
 # Test Lagrange base
 function ref_value(i::Int, ξ::Vec{2})
     ξ_x = ξ[1]
