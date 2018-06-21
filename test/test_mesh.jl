@@ -8,7 +8,7 @@ mesh = parse_mesh_triangle(root_file)
 # General checks
 @test getncells(mesh) == 4
 @test getnnodes(mesh) == 5
-@test getncellfaces(mesh) == 3
+@test n_faces_per_cell(mesh) == 3
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/4
 end
@@ -28,7 +28,7 @@ end
 mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 @test getncells(mesh) == 8
 @test getnnodes(mesh) == 9
-@test getncellfaces(mesh) == 3
+@test n_faces_per_cell(mesh) == 3
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/8
 end

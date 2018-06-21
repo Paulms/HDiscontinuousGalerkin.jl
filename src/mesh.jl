@@ -4,10 +4,9 @@ abstract type AbstractCell{dim,V,F} end
 
 struct Node{dim,T}
     x::Vec{dim, T}
-    ref::Int
 end
 
-Node(x::NTuple{dim,T}, ref::Int) where {dim,T} = Node(Vec{dim,T}(x), ref)
+Node(x::NTuple{dim,T}) where {dim,T} = Node(Vec{dim,T}(x))
 
 """
 get_coords(node::Node) = node.x
@@ -15,9 +14,9 @@ get coordinates of a node
 """
 @inline get_coordinates(node::Node) = node.x
 
-struct Cell{dim, N, M, T,TI}
-    nodes::NTuple{N,TI}
-    faces::NTuple{M,TI}
+struct Cell{dim, N, M, T}
+    nodes::NTuple{N,Int}
+    faces::NTuple{M,Int}
     orientation::Vector{Bool}
     normals::Vector{Vec{dim,T}}
 end
@@ -25,7 +24,6 @@ end
 #Common cell types
 const TriangleCell = Cell{2,3,3}
 @inline get_cell_name(::TriangleCell) = "Triangle"
-
 @inline getnfaces(cell::Cell{dim,N,M}) where {dim,N,M} = M
 @inline get_normal(cell::Cell, face::Int) = cell.normals[face]
 @inline face_orientation(cell::Cell, face::Int) = cell.orientation[face]
@@ -39,45 +37,52 @@ function topology_elements(cell::Cell{2},element::Int)
     end
 end
 
-struct Eddge{T <: Int}
-    cells::Vector{T}
-    nodes::Vector{T}
-    ref::T  #To check if is belongs to the boundary
+struct Edge #For 3D meshes
+    cells::Vector{Int}
+    nodes::Vector{Int}
 end
 
-struct Face{T <: Int}
-    cells::Vector{T}
-    nodes::Vector{T}
-    ref::T  #To check if is belongs to the boundary
+struct Face
+    cells::Vector{Int}
+    nodes::Vector{Int}
 end
 
-struct PolygonalMesh{dim,N,M,T,TI} <: AbstractPolygonalMesh
-    cells::Vector{Cell{dim,N,M,T,TI}}
+struct PolygonalMesh{dim,N,M,T} <: AbstractPolygonalMesh
+    cells::Vector{Cell{dim,N,M,T}}
     nodes::Vector{Node{dim,T}}
-    faces::Vector{Face{TI}}
-    facesets::Dict{String,Set{TI}}
+    faces::Vector{Face}
+    facesets::Dict{String,Set{Int}}
 end
 
-function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,T,T1}) where {dim,N,M,T,T1}
+function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
     nodes_m = Matrix{T}(length(mesh.nodes),dim)
     for (k,node) in enumerate(mesh.nodes)
         nodes_m[k,:] = node.x
     end
     nodes_m
 end
-function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,T,T1}) where {dim,N,M,T1,T}
-    cells_m = Matrix{T1}(getncells(mesh), getncellfaces(mesh))
+function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+    cells_m = Matrix{Int}(getncells(mesh), n_faces_per_cell(mesh))
     for k = 1:getncells(mesh)
         @. cells_m[k,:] = mesh.cells[k].nodes - 1
     end
     cells_m
 end
-@inline getncellfaces(mesh::PolygonalMesh{dim,N,M}) where {dim,N,M} = M
+@inline n_faces_per_cell(mesh::PolygonalMesh{dim,N,M}) where {dim,N,M} = M
 @inline getnfaces(mesh::PolygonalMesh) = length(mesh.faces)
 @inline getnnodes(mesh::PolygonalMesh) = length(mesh.nodes)
 @inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
-@inline get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
-@inline get_coordinates(face::Face, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in face.nodes]
+"""
+    getcoordinates(cell, mesh::PolygonalMesh)
+
+Return a vector with the coordinates of the vertices of cell number `cell`.
+"""
+@inline function get_coordinates(cell::Cell, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+    return [mesh.nodes[j].x for j in cell.nodes]::Vector{Vec{dim,T}}
+end
+@inline function get_coordinates(face::Face, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+    return [mesh.nodes[j].x for j in face.nodes]::Vector{Vec{dim,T}}
+end
 @inline get_cells(mesh::PolygonalMesh) = mesh.cells
 @inline get_nodes(mesh::PolygonalMesh) = mesh.nodes
 @inline get_faces(mesh::PolygonalMesh) = mesh.faces

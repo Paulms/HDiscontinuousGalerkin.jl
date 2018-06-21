@@ -15,7 +15,7 @@ function parse_nodes!(nodes,root_file)
                 else
                     #parse nodes
                     pln = collect(read_line(ln, (Int,Float64,Float64,Int)))
-                    node = Node((pln[2],pln[3]),pln[4])
+                    node = Node((pln[2],pln[3]))
                     push!(nodes,node)
                 end
             end
@@ -23,7 +23,7 @@ function parse_nodes!(nodes,root_file)
     end
 end
 
-function parse_faces!(faces,root_file)
+function parse_faces!(faces, faces_ref,root_file)
     open(root_file*".edge") do f
         first_line = true
         for ln in eachline(f)
@@ -34,15 +34,16 @@ function parse_faces!(faces,root_file)
                 else
                     #parse nodes
                     pln = collect(read_line(ln, (Int,Int,Int,Int)))
-                    face = Face(Vector{Int}(),pln[2:3],pln[4])
+                    face = Face(Vector{Int}(),pln[2:3])
                     push!(faces, face)
+                    push!(faces_ref, pln[4])
                 end
             end
         end
     end
 end
 
-function parse_cells!(cells, faces, faces_unorded,facesets, nodes, root_file)
+function parse_cells!(cells, faces, faces_unorded, faces_ref,facesets, nodes, root_file)
     #read cell nodes
     open(root_file*".ele") do f
         first_line = true
@@ -77,10 +78,10 @@ function parse_cells!(cells, faces, faces_unorded,facesets, nodes, root_file)
                             ref = -1
                             for (j,face) in enumerate(faces_unorded)
                                 if sort(face.nodes) == sort(c_face)
-                                    ref = face.ref
+                                    ref = faces_ref[j]
                                 end
                             end
-                            face = Face([n_el],c_face,ref)
+                            face = Face([n_el],c_face)
                             push!(faces, face)
                             n_faces = n_faces + 1
                             el_faces[i] = n_faces
@@ -114,11 +115,12 @@ Ex: `parse_mesh_triangle("figure.1")`
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces_unorded = Vector{Face}()
+    faces_ref = Vector{Int}()
     faces = Vector{Face}()
     cells = Vector{Cell}()
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
-    parse_faces!(faces_unorded, root_file)
-    parse_cells!(cells, faces, faces_unorded,facesets,nodes, root_file)
-    PolygonalMesh{2,3,3,eltype(nodes[1].x),eltype(eltype(values(facesets)))}(cells, nodes, faces, facesets)
+    parse_faces!(faces_unorded, faces_ref, root_file)
+    parse_cells!(cells, faces, faces_unorded,faces_ref,facesets,nodes, root_file)
+    PolygonalMesh{2,3,3,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end

@@ -12,7 +12,7 @@ function _generate_2d_nodes!(nodes, nx, ny, LL, LR, UR, UL)
             ratio = j / (nx-1)
             x = x0 * (1 - ratio) + ratio * x1
             y = y0 * (1 - ratio) + ratio * y1
-            push!(nodes, Node(Vec{2}((x, y)),0))
+            push!(nodes, Node(Vec{2}((x, y))))
         end
     end
 end
@@ -52,8 +52,7 @@ function _build_cells(cells, el_nodes, n_el, faces, nodes)
             end
         end
         if !face_found
-            ref = -1
-            face = Face([n_el],c_face,ref)
+            face = Face([n_el],c_face)
             push!(faces, face)
             el_faces[i] = length(faces)
         end
@@ -112,8 +111,7 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
         _build_cells(cells, el_nodes, n_el, faces, nodes) # ◹
     end
 
-    # Cell faces
-    ref_faces = Vector{Face}(length(faces))
+    # Add faces sets
     bottomSet = Set{Int}()
     rightSet = Set{Int}()
     topSet = Set{Int}()
@@ -123,23 +121,18 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
         if length(face.cells) == 1
             if (nodes[face.nodes[1]].x[2] == LL[2] && nodes[face.nodes[2]].x[2] == LL[2])
                 push!(bottomSet, k)
-                ref = 1
             elseif (nodes[face.nodes[1]].x[1] == UR[1] && nodes[face.nodes[2]].x[1] == UR[1])
                 push!(rightSet, k)
-                ref = 2
             elseif (nodes[face.nodes[1]].x[2] == UR[2] && nodes[face.nodes[2]].x[2] == UR[2])
                 push!(topSet, k)
-                ref = 3
             elseif (nodes[face.nodes[1]].x[1] == LL[1] && nodes[face.nodes[2]].x[1] == LL[1])
                 push!(leftSet, k)
-                ref = 4
             else
                 throw("Face $k belongs to one cell but is not in boundary")
             end
         end
-        ref_faces[k] = Face(face.cells,face.nodes,ref)
     end
     facesets = Dict("bottom"=>bottomSet, "right"=>rightSet,"left"=>leftSet,
                     "top"=>topSet,"boundary"=>union(bottomSet,rightSet,leftSet,topSet))
-    return PolygonalMesh{2,3,3,eltype(nodes[1].x),eltype(bottomSet)}(cells, nodes, ref_faces, facesets)
+    return PolygonalMesh{2,3,3,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end

@@ -83,7 +83,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
 
     n_qpoints = length(getpoints(quad_rule))
     n_cells = getncells(mesh)
-    n_faces = getncellfaces(mesh)
+    n_faces = n_faces_per_cell(mesh)
     isJconstant = (getorder(geom_interpol) == 1)
     NN = isJconstant ? 1 : 2
     Jdim = isJconstant ? 1 : n_qpoints
