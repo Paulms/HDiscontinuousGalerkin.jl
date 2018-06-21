@@ -145,7 +145,7 @@ using PyCall
 using PyPlot
 @pyimport matplotlib.tri as mtri
 m_nodes = get_vertices_matrix(mesh)
-triangles = get_cells_matrix2(mesh)
+triangles = get_cells_matrix(mesh)
 triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
 PyPlot.triplot(triang, "ko-")
 
