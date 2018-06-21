@@ -1,10 +1,12 @@
 # Abstract type for Polygonal Meshes
 abstract type AbstractPolygonalMesh end
+abstract type AbstractCell{dim,V,F} end
 
-struct Node{N,T}
-    x::Vec{N, T}
+struct Node{dim,T}
+    x::Vec{dim, T}
     ref::Int
 end
+
 Node(x::NTuple{dim,T}, ref::Int) where {dim,T} = Node(Vec{dim,T}(x), ref)
 
 """
@@ -13,23 +15,34 @@ get coordinates of a node
 """
 @inline get_coordinates(node::Node) = node.x
 
-struct Cell{T <: Int,N,T2}
-    nodes::Vector{T}
-    faces::Vector{T}
+struct Cell{dim, N, M, T,TI}
+    nodes::NTuple{N,TI}
+    faces::NTuple{M,TI}
     orientation::Vector{Bool}
-    normals::Vector{Vec{N,T2}}
+    normals::Vector{Vec{dim,T}}
 end
-@inline numfaces(cell::Cell) = length(cell.faces)
+
+#Common cell types
+const TriangleCell = Cell{2,3,3}
+@inline get_cell_name(::TriangleCell) = "Triangle"
+
+@inline getnfaces(cell::Cell{dim,N,M}) where {dim,N,M} = M
 @inline get_normal(cell::Cell, face::Int) = cell.normals[face]
 @inline face_orientation(cell::Cell, face::Int) = cell.orientation[face]
-function topology_elements(cell::Cell,element::Int)
+function topology_elements(cell::Cell{2},element::Int)
     if element == 0
         return cell.nodes
     elseif element == 1
-        return cell.faces    #rename as edges
+        return cell.faces
     else
-        throw("Topology element of order $element not available for current mesh")
+        throw("Topology element of order $element not available for cell type")
     end
+end
+
+struct Eddge{T <: Int}
+    cells::Vector{T}
+    nodes::Vector{T}
+    ref::T  #To check if is belongs to the boundary
 end
 
 struct Face{T <: Int}
@@ -37,20 +50,30 @@ struct Face{T <: Int}
     nodes::Vector{T}
     ref::T  #To check if is belongs to the boundary
 end
-struct PolygonalMesh{dims,Type, T <: Int} <: AbstractPolygonalMesh
-    cells::Vector{Cell{T,dims,Type}}
-    nodes::Vector{Node{dims,Type}}
-    faces::Vector{Face{T}}
-    facesets::Dict{String,Set{T}}
+
+struct PolygonalMesh{dim,N,M,T,TI} <: AbstractPolygonalMesh
+    cells::Vector{Cell{dim,N,M,T,TI}}
+    nodes::Vector{Node{dim,T}}
+    faces::Vector{Face{TI}}
+    facesets::Dict{String,Set{TI}}
 end
-function get_maxnfaces(mesh::PolygonalMesh)
-    nmax = 0
-    for cell in mesh.cells
-        nmax = max(nmax, numfaces(cell))
+
+function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,T,T1}) where {dim,N,M,T,T1}
+    nodes_m = Matrix{T}(length(mesh.nodes),dim)
+    for (k,node) in enumerate(mesh.nodes)
+        nodes_m[k,:] = node.x
     end
-    nmax
+    nodes_m
 end
-@inline numfaces(mesh::PolygonalMesh) = length(mesh.faces)
+function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,T,T1}) where {dim,N,M,T1,T}
+    cells_m = Matrix{T1}(getncells(mesh), getncellfaces(mesh))
+    for k = 1:getncells(mesh)
+        @. cells_m[k,:] = mesh.cells[k].nodes - 1
+    end
+    cells_m
+end
+@inline getncellfaces(mesh::PolygonalMesh{dim,N,M}) where {dim,N,M} = M
+@inline getnfaces(mesh::PolygonalMesh) = length(mesh.faces)
 @inline getnnodes(mesh::PolygonalMesh) = length(mesh.nodes)
 @inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
 @inline get_coordinates(cell::Cell, mesh::PolygonalMesh) = [mesh.nodes[j].x for j in cell.nodes]
@@ -61,15 +84,15 @@ end
 @inline get_faces(cell::Cell, mesh::PolygonalMesh) = [mesh.faces[i] for i in cell.faces]
 @inline node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
 @inline node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
-@inline ndims(mesh::PolygonalMesh{dims,Type}) where {dims,Type} = dims
+@inline ndims(mesh::PolygonalMesh{dim}) where {dim} = dim
 @inline getncells(mesh::PolygonalMesh) = length(mesh.cells)
 
-@inline nodes(ele::Cell, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in ele.nodes]
-@inline nodes(face::Face, mesh::PolygonalMesh{dims,Type}) where {dims,Type} = [mesh.nodes[node] for node in face.nodes]
+@inline nodes(ele::Cell, mesh::PolygonalMesh) = [mesh.nodes[node] for node in ele.nodes]
+@inline nodes(face::Face, mesh::PolygonalMesh) = [mesh.nodes[node] for node in face.nodes]
 @inline faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
 @inline cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in face.cells]
 
-function cell_diameter(mesh::PolygonalMesh{N,T}, idx::Int) where {N,T}
+function cell_diameter(mesh::PolygonalMesh{dim,N,M,T}, idx::Int) where {dim,N,M,T}
     K = get_cells(mesh)[idx]
     h = zero(T)
      for k in K.faces

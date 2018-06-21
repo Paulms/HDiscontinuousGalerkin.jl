@@ -144,14 +144,8 @@ Etu_h <= 0.0002
 using PyCall
 using PyPlot
 @pyimport matplotlib.tri as mtri
-triangles = Matrix{Int}(getncells(mesh), 3)
-m_nodes = Matrix{Float64}(length(mesh.nodes),dim)
-for (k,node) in enumerate(mesh.nodes)
-    m_nodes[k,:] = node.x
-end
-for k = 1:getncells(mesh)
-    triangles[k,:] = mesh.cells[k].nodes-1
-end
+m_nodes = get_vertices_matrix(mesh)
+triangles = get_cells_matrix2(mesh)
 triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
 PyPlot.triplot(triang, "ko-")
 

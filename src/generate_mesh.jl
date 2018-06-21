@@ -1,9 +1,3 @@
-using Tensors
-using HDiscontinuousGalerkin
-
-#Common cell types
-struct TriangleCell end
-
 function _generate_2d_nodes!(nodes, nx, ny, LL, LR, UR, UL)
       for i in 0:ny-1
         ratio_bounds = i / (ny-1)
@@ -70,7 +64,8 @@ function _build_cells(cells, el_nodes, n_el, faces, nodes)
     _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
 
     #save cell
-    cell = Cell(el_nodes, el_faces, orientation, normals)
+    N = length(el_nodes); M = length(el_faces)
+    cell = Cell(NTuple{N}(el_nodes), NTuple{M}(el_faces), orientation, normals)
     push!(cells, cell)
 end
 
@@ -146,5 +141,5 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     end
     facesets = Dict("bottom"=>bottomSet, "right"=>rightSet,"left"=>leftSet,
                     "top"=>topSet,"boundary"=>union(bottomSet,rightSet,leftSet,topSet))
-    return PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x),eltype(bottomSet)}(cells, nodes, ref_faces, facesets)
+    return PolygonalMesh{2,3,3,eltype(nodes[1].x),eltype(bottomSet)}(cells, nodes, ref_faces, facesets)
 end

@@ -95,7 +95,9 @@ function parse_cells!(cells, faces, faces_unorded,facesets, nodes, root_file)
                     _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
 
                     #save cell
-                    cell = Cell(el_nodes, el_faces, orientation, normals)
+                    N = length(el_nodes)
+                    M = length(el_faces)
+                    cell = Cell(NTuple{N}(el_nodes), NTuple{M}(el_faces), orientation, normals)
                     push!(cells, cell)
                 end
             end
@@ -118,5 +120,5 @@ function parse_mesh_triangle(root_file)
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_unorded, root_file)
     parse_cells!(cells, faces, faces_unorded,facesets,nodes, root_file)
-    PolygonalMesh{size(nodes[1].x,1),eltype(nodes[1].x),eltype(eltype(values(facesets)))}(cells, nodes, faces, facesets)
+    PolygonalMesh{2,3,3,eltype(nodes[1].x),eltype(eltype(values(facesets)))}(cells, nodes, faces, facesets)
 end

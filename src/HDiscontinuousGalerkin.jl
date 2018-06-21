@@ -31,11 +31,12 @@ include("boundary.jl")
 export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
 export Cell, Node, Face, PolygonalMesh
-export getncells, numfaces, get_maxnfaces, get_normal
+export getncells, getnfaces, getncellfaces, get_normal
 export face_orientation, get_faceset
 export rectangle_mesh
 export TriangleCell
-export reference_edge_nodes, getnnodes
+export reference_edge_nodes, getnnodes, get_cell_name
+export get_vertices_matrix, get_cells_matrix
 
 # Boundaries
 export Dirichlet

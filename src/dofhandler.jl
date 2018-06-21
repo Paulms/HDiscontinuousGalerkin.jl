@@ -53,19 +53,19 @@ function field_offset(dh::DofHandler, field::TrialFunction)
 end
 
 """
-    dof_range(dh:DofHandler, field_name)
+    dof_range(dh::DofHandler, u::TrialFunction)
 
-Return the local dof range for `field_name`. Example:
+Return the local dof range for `u`. Example:
 
 ```jldoctest
-julia> grid = generate_grid(Triangle, (3, 3));
+julia> mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)));
 
-julia> dh = DofHandler(grid); push!(dh, :u, 3); push!(dh, :p, 1); close!(dh);
+julia> dh = DofHandler(mesh); push!(dh, u); push!(dh, p); close!(dh);
 
-julia> dof_range(dh, :u)
+julia> dof_range(dh, u)
 1:9
 
-julia> dof_range(dh, :p)
+julia> dof_range(dh, p)
 10:12
 ```
 """
@@ -122,14 +122,14 @@ function close!(dh::DofHandler{dim}) where {dim}
                 if nelementdofs > 0
                     for element in topology_elements(cell,n_element)
                         token = ht_keyindex2!(topologyDicts[n_element][fi], element)
-                        if token > 0 # haskey(vertexdicts[fi], vertex) # reuse dofs
-                            reuse_dof = topologyDicts[n_element][fi].vals[token] # vertexdicts[fi][vertex]
+                        if token > 0 # reuse dofs
+                            reuse_dof = topologyDicts[n_element][fi].vals[token]
                             for d in 1:getncomponents(dh.variables[fi])
                                 push!(dh.cell_dofs, reuse_dof + (d-1))
                             end
                         else # token <= 0, distribute new dofs
                             for elementdof in 1:nelementdofs
-                                Base._setindex!(topologyDicts[n_element][fi], nextdof, element, -token) # vertexdicts[fi][vertex] = nextdof
+                                Base._setindex!(topologyDicts[n_element][fi], nextdof, element, -token)
                                 for d in 1:getncomponents(dh.variables[fi])
                                     push!(dh.cell_dofs, nextdof)
                                     nextdof += 1

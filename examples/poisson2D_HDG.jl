@@ -67,8 +67,8 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
     He = zeros(3*n_basefuncs_t, 3*n_basefuncs_t)
 
     # create a matrix assembler and rhs vector
-    assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0.0)
     ff = interpolate(f, Wh, mesh)
 
@@ -113,7 +113,7 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
             end
         end
         #Face integrals
-        for face_idx in 1:numfaces(mesh.cells[cell_idx])
+        for face_idx in 1:getnfaces(mesh.cells[cell_idx])
             for q_point in 1:getnfacequadpoints(Wh)
                 dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
                 orientation = face_orientation(mesh.cells[cell_idx], face_idx)
@@ -225,14 +225,8 @@ Etu_h <= 0.00006
 using PyCall
 using PyPlot
 @pyimport matplotlib.tri as mtri
-triangles = Matrix{Int}(getncells(mesh), 3)
-m_nodes = Matrix{Float64}(length(mesh.nodes),dim)
-for (k,node) in enumerate(mesh.nodes)
-    m_nodes[k,:] = node.x
-end
-for k = 1:getncells(mesh)
-    triangles[k,:] = mesh.cells[k].nodes-1
-end
+m_nodes = get_vertices_matrix(mesh)
+triangles = get_cells_matrix(mesh)
 triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
 PyPlot.triplot(triang, "ko-")
 

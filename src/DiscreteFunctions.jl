@@ -53,7 +53,7 @@ end
 @inline getncomponents(u::TrialFunction) = u.components
 
 function TrialFunction(fs::ScalarTraceFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-    m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs), get_maxnfaces(mesh))
+    m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs), getncellfaces(mesh))
     f_node = Vector{Vec{dim,T}}(getncells(mesh))
     for (k,cell) in enumerate(mesh.cells)
         f_node[k] = mesh.nodes[cell.nodes[1]].x

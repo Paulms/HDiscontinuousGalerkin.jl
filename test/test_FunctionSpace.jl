@@ -93,8 +93,8 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     He = zeros(3*n_basefuncs_t, 3*n_basefuncs_t)
 
     # create a matrix assembler and rhs vector
-    assembler = start_assemble(numfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(numfaces(mesh)*n_basefuncs_t)
+    assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0)
     K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
     b_element = Array{AbstractVector{Float64}}(getncells(mesh))
@@ -138,7 +138,7 @@ function doassemble(Vh, Wh, Mh, τ = 1)
             end
         end
         #Face integrals
-        for face_idx in 1:numfaces(mesh.cells[cell_idx])
+        for face_idx in 1:getnfaces(mesh.cells[cell_idx])
             for q_point in 1:getnfacequadpoints(Wh)
                 dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
                 orientation = face_orientation(mesh.cells[cell_idx], face_idx)
