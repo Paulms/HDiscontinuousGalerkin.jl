@@ -38,10 +38,10 @@ end
 const sq2 = sqrt(2)
 const sq3 = sqrt(3)
 @test Wh.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
-@test Wh.detJf[1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[2] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[3] ≈ [1,sq2/2,sq2/2]
-@test Wh.detJf[4] ≈ [sq2/2,sq2/2,1]
+@test Wh.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
+@test Wh.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
+@test Wh.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
+@test Wh.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
 
 # ### Boundary conditions
 dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)

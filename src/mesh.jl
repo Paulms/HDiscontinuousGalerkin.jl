@@ -69,8 +69,10 @@ function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
     cells_m
 end
 @inline n_faces_per_cell(mesh::PolygonalMesh{dim,N,M}) where {dim,N,M} = M
+@inline n_nodes_per_cell(mesh::PolygonalMesh{dim,N,M}) where {dim,N,M} = N
 @inline getnfaces(mesh::PolygonalMesh) = length(mesh.faces)
 @inline getnnodes(mesh::PolygonalMesh) = length(mesh.nodes)
+@inline getncells(mesh::PolygonalMesh) = length(mesh.cells)
 @inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
 """
     getcoordinates(cell, mesh::PolygonalMesh)
@@ -78,20 +80,44 @@ end
 Return a vector with the coordinates of the vertices of cell number `cell`.
 """
 @inline function get_coordinates(cell::Cell, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
-    return [mesh.nodes[j].x for j in cell.nodes]::Vector{Vec{dim,T}}
+    coords = Vector{Vec{dim,T}}(N)
+    for (i,j) in enumerate(cell.nodes)
+        coords[i] = mesh.nodes[j].x
+    end
+    return coords
 end
+@inline function get_cell_coordinates(cell_idx::Int, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+    coords = Vector{Vec{dim,T}}(N)
+    for (i,j) in enumerate(mesh.cells[cell_idx].nodes)
+        coords[i] = mesh.nodes[j].x
+    end
+    return coords
+end
+
+@inline function get_cell_coordinates!(coords::Vector{Vec{dim,T}}, cell_idx::Int, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+    @assert length(coords) == N
+    for (i,j) in enumerate(mesh.cells[cell_idx].nodes)
+        coords[i] = mesh.nodes[j].x
+    end
+    return coords
+end
+
 @inline function get_coordinates(face::Face, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
     return [mesh.nodes[j].x for j in face.nodes]::Vector{Vec{dim,T}}
 end
 @inline get_cells(mesh::PolygonalMesh) = mesh.cells
 @inline get_nodes(mesh::PolygonalMesh) = mesh.nodes
 @inline get_faces(mesh::PolygonalMesh) = mesh.faces
-@inline get_faces(cell::Cell, mesh::PolygonalMesh) = [mesh.faces[i] for i in cell.faces]
+@inline function get_faces(cell::Cell, mesh::PolygonalMesh{dim,N,M}) where {dim,N,M}
+    cell_faces = Vector{Face}(M)
+    for (i,j) in enumerate(cell.faces)
+        cell_faces[i] = mesh.faces[j]
+    end
+     return cell_faces
+ end
 @inline node(idx::Int, face::Face, mesh::PolygonalMesh) = mesh.nodes[face.nodes[idx]]
 @inline node(idx::Int, ele::Cell, mesh::PolygonalMesh) = mesh.nodes[ele.nodes[idx]]
 @inline ndims(mesh::PolygonalMesh{dim}) where {dim} = dim
-@inline getncells(mesh::PolygonalMesh) = length(mesh.cells)
-
 @inline nodes(ele::Cell, mesh::PolygonalMesh) = [mesh.nodes[node] for node in ele.nodes]
 @inline nodes(face::Face, mesh::PolygonalMesh) = [mesh.nodes[node] for node in face.nodes]
 @inline faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
