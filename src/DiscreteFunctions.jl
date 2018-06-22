@@ -42,7 +42,7 @@ end
 struct TrialFunction{dim,T,refshape,N}
     fs::DiscreteFunctionSpace{dim,T,refshape}
     m_values::Array{T,N}
-    f_node::Vector{Vec{dim,T}}
+    mesh::PolygonalMesh{dim}
     components::Int
 end
 
@@ -54,39 +54,23 @@ end
 
 function TrialFunction(fs::ScalarTraceFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs), n_faces_per_cell(mesh))
-    f_node = Vector{Vec{dim,T}}(getncells(mesh))
-    for (k,cell) in enumerate(mesh.cells)
-        f_node[k] = mesh.nodes[cell.nodes[1]].x
-    end
-    return TrialFunction(fs, m_values, f_node, 1)
+    return TrialFunction(fs, m_values, mesh, 1)
 end
 
 function TrialFunction(fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
-    f_node = Vector{Vec{dim,T}}(getncells(mesh))
-    for (k,cell) in enumerate(mesh.cells)
-        f_node[k] = mesh.nodes[cell.nodes[1]].x
-    end
-    return TrialFunction(fs, m_values, f_node, 1)
+    return TrialFunction(fs, m_values, mesh, 1)
 end
 
 function TrialFunction(fs::VectorFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
-    f_node = Vector{Vec{dim,T}}(getncells(mesh))
-    for (k,cell) in enumerate(mesh.cells)
-        f_node[k] = mesh.nodes[cell.nodes[1]].x
-    end
-    return TrialFunction(fs, m_values, f_node, dim)
+    return TrialFunction(fs, m_values, mesh, dim)
 end
 
 function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values::Array{T,N}, mesh::PolygonalMesh) where {dim,T,N}
     @assert size(m_values,1) == getncells(mesh)
     @assert size(m_values,2) == getnbasefunctions(fs)
-    f_node = Vector{Vec{dim,T}}(getncells(mesh))
-    for (k,cell) in enumerate(mesh.cells)
-        f_node[k] = mesh.nodes[cell.nodes[1]].x
-    end
-    return TrialFunction(fs, m_values, f_node, components)
+    return TrialFunction(fs, m_values, mesh, components)
 end
 
 """
@@ -111,7 +95,7 @@ function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T})
 """
 function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T}) where {dim,T}
     u = zero(T)
-    ξ = reference_coordinate(u_h.fs, cell, u_h.f_node[cell], x)
+    ξ = reference_coordinate(u_h.fs, cell, u_h.mesh.nodes[mesh.cells[cell].nodes[1]].x, x)
     for i in 1:getnbasefunctions(u_h.fs)
         u  += u_h.m_values[cell, i]*value(get_interpolation(u_h.fs), i, ξ)
     end
