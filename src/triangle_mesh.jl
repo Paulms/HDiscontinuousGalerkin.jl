@@ -23,7 +23,7 @@ function parse_nodes!(nodes,root_file)
     end
 end
 
-function parse_faces!(faces, faces_ref,root_file)
+function parse_faces!(faces_ref,root_file)
     open(root_file*".edge") do f
         first_line = true
         for ln in eachline(f)
@@ -34,22 +34,25 @@ function parse_faces!(faces, faces_ref,root_file)
                 else
                     #parse nodes
                     pln = collect(read_line(ln, (Int,Int,Int,Int)))
-                    face = Face(Vector{Int}(),pln[2:3])
-                    push!(faces, face)
-                    push!(faces_ref, pln[4])
+                    element = (minimum(pln[2:3]),maximum(pln[2:3]))
+                    token = ht_keyindex2!(faces_ref, element)
+                    if token < 0
+                        Base._setindex!(faces_ref, pln[4], element, -token)
+                    end
                 end
             end
         end
     end
 end
 
-function parse_cells!(cells, faces, faces_unorded, faces_ref,facesets, nodes, root_file)
+function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
     #read cell nodes
     open(root_file*".ele") do f
         first_line = true
         n_el = 0
         n_faces = 0
         boundary_faces = Set{Int}()
+        facesdict = Dict{NTuple{2,Int},Int}()
         for ln in eachline(f)
             m = match(r"^\s*(?:#|$)", ln)
             if m == nothing
@@ -64,27 +67,24 @@ function parse_cells!(cells, faces, faces_unorded, faces_ref,facesets, nodes, ro
                     #build faces
                     for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
                         c_face = [el_nodes[fn_id[1]],el_nodes[fn_id[2]]]
-                        face_found = false
-                        for (j,face) in enumerate(faces)
-                            if sort(face.nodes) == sort(c_face)
-                                el_faces[i] = j
-                                if !(n_el in face.cells)
-                                    push!(face.cells,n_el)
-                                end
-                                face_found = true
+                        element = (minimum(c_face),maximum(c_face))
+                        token = ht_keyindex2!(facesdict, element)
+                        if token > 0
+                            el_faces[i] = facesdict.vals[token]
+                            if !(n_el in faces[facesdict.vals[token]].cells)
+                                push!(faces[facesdict.vals[token]].cells,n_el)
                             end
-                        end
-                        if !face_found
+                        else
                             ref = -1
-                            for (j,face) in enumerate(faces_unorded)
-                                if sort(face.nodes) == sort(c_face)
-                                    ref = faces_ref[j]
-                                end
+                            token2 = ht_keyindex2!(faces_ref, element)
+                            if token2 > 0
+                                ref = faces_ref.vals[token2]
                             end
                             face = Face([n_el],c_face)
                             push!(faces, face)
                             n_faces = n_faces + 1
                             el_faces[i] = n_faces
+                            Base._setindex!(facesdict, n_faces, element, -token)
                             if ref > 0
                                 push!(boundary_faces, n_faces)
                             end
@@ -114,13 +114,12 @@ Ex: `parse_mesh_triangle("figure.1")`
 """
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
-    faces_unorded = Vector{Face}()
-    faces_ref = Vector{Int}()
+    faces_ref = Dict{NTuple{2,Int},Int}()
     faces = Vector{Face}()
     cells = Vector{Cell}()
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
-    parse_faces!(faces_unorded, faces_ref, root_file)
-    parse_cells!(cells, faces, faces_unorded,faces_ref,facesets,nodes, root_file)
+    parse_faces!(faces_ref, root_file)
+    parse_cells!(cells, faces, faces_ref,facesets,nodes, root_file)
     PolygonalMesh{2,3,3,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end
