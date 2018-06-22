@@ -10,9 +10,7 @@ Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
 u_h = TrialFunction(Wh, mesh)
 
 # ### Degrees of freedom
-dh = DofHandler(mesh)
-push!(dh, u_h)
-close!(dh);
+dh = DofHandler([u_h],mesh)
 K = create_sparsity_pattern(dh);
 
 # ### Boundary conditions

@@ -3,16 +3,16 @@
 
 Construct a `DofHandler` based on the grid `grid`.
 """
-struct DofHandler{dim,T}
-    variables::Vector{TrialFunction}
+struct DofHandler{dim,T,shape,N,M,K}
+    variables::Vector{TrialFunction{dim,T,shape,K}}
     cell_dofs::Vector{Int}
     cell_dofs_offset::Vector{Int}
-    closed::ScalarWrapper{Bool}
-    mesh::PolygonalMesh{dim,T}
+    mesh::PolygonalMesh{dim,N,M,T}
 end
 
-function DofHandler(mesh::PolygonalMesh)
-    DofHandler(TrialFunction[], Int[], Int[], ScalarWrapper(false), mesh)
+function DofHandler(varSet::Vector{TrialFunction{dim,T,shape,K}}, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T,shape,K}
+    dofhandler = DofHandler(varSet, Int[], Int[], mesh)
+    _distribute_dofs(dofhandler)
 end
 
 # macro VarName(arg)
@@ -34,7 +34,6 @@ end
 
 ndofs(dh::DofHandler) = maximum(dh.cell_dofs)
 ndofs_per_cell(dh::DofHandler, cell::Int=1) = dh.cell_dofs_offset[cell+1] - dh.cell_dofs_offset[cell]
-isclosed(dh::DofHandler) = dh.closed[]
 @inline nvariables(dh::DofHandler) = length(dh.variables)
 
 function find_field(dh::DofHandler, field::TrialFunction)
@@ -76,18 +75,9 @@ function dof_range(dh::DofHandler, field::TrialFunction)
     return (offset+1):(offset+n_field_dofs)
 end
 
-function Base.push!(dh::DofHandler, u::TrialFunction)
-    @assert !isclosed(dh)
-    @assert !in(u, dh.variables)
-    push!(dh.variables, u)
-    return dh
-end
-
 # close the DofHandler and distribute all the dofs
 #TODO: This only work for D < 3
-function close!(dh::DofHandler{dim}) where {dim}
-    @assert !isclosed(dh)
-
+function _distribute_dofs(dh::DofHandler{dim,T,shape}) where {dim,T,shape}
     # `vertexdict` keeps track of the visited vertices. We store the global vertex
     # number and the first dof we added to that vertex.
     vertexdicts = [Dict{Int,Int}() for _ in 1:nvariables(dh)]
@@ -110,13 +100,16 @@ function close!(dh::DofHandler{dim}) where {dim}
     nextdof = 1 # next free dof to distribute
     push!(dh.cell_dofs_offset, 1) # dofs for the first cell start at 1
 
+    # Get topologies
+    n_max_topology_elements = maximum(keys(get_topology(shape, Val{dim})))
+    geometric_cell_topology = get_topology(shape, Val{dim})
     # loop over all the cells, and distribute dofs for all the fields
     for (ci, cell) in enumerate(get_cells(dh.mesh))
         for fi in 1:nvariables(dh)
-            n_max_topology_elements = maximum(keys(get_topology(getrefshape(dh.variables[fi]), Val{dim})))
+            cell_topology = get_topology(get_interpolation(getfunctionspace(dh.variables[fi])))
             for n_element in 0:n_max_topology_elements-1
-                n_el_dofs_cell = get_topology(get_interpolation(getfunctionspace(dh.variables[fi])))[n_element]
-                n_el_cell = get_topology(getrefshape(dh.variables[fi]), Val{dim})[n_element]
+                n_el_dofs_cell = cell_topology[n_element]
+                n_el_cell = geometric_cell_topology[n_element]
                 @assert mod(n_el_dofs_cell, n_el_cell) == 0
                 nelementdofs = Int(n_el_dofs_cell/n_el_cell)
                 if nelementdofs > 0
@@ -136,10 +129,10 @@ function close!(dh::DofHandler{dim}) where {dim}
                                 end
                             end
                         end
-                    end # vertex loop
+                    end # element loop
                 end
-            end
-            ncelldofs = get_topology(get_interpolation(getfunctionspace(dh.variables[fi])))[dim]
+            end #elements loop
+            ncelldofs = cell_topology[dim]
             if ncelldofs > 0 # always distribute new dofs for cell
                 for celldof in 1:ncelldofs
                     for d in 1:getncomponents(dh.variables[fi])
@@ -152,12 +145,10 @@ function close!(dh::DofHandler{dim}) where {dim}
         # push! the first index of the next cell to the offset vector
         push!(dh.cell_dofs_offset, length(dh.cell_dofs)+1)
     end # cell loop
-    dh.closed[] = true
     return dh
 end
 
 function celldofs!(global_dofs::Vector{Int}, dh::DofHandler, i::Int)
-    @assert isclosed(dh)
     @assert length(global_dofs) == ndofs_per_cell(dh, i)
     unsafe_copy!(global_dofs, 1, dh.cell_dofs, dh.cell_dofs_offset[i], length(global_dofs))
     return global_dofs

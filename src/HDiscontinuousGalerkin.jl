@@ -86,7 +86,6 @@ export errornorm
 
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!
-export close!
 export create_sparsity_pattern, reconstruct!
 export dof_range
 
