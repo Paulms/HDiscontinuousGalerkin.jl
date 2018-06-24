@@ -38,30 +38,30 @@ function topology_elements(cell::Cell{2},element::Int)
 end
 
 struct Edge #For 3D meshes
-    cells::Vector{Int}
-    nodes::Vector{Int}
+     cells::Vector{Int}
+     nodes::NTuple{2,Int}
 end
 
-struct Face
+struct Face{K}
     cells::Vector{Int}
-    nodes::Vector{Int}
+    nodes::NTuple{K,Int}
 end
 
-struct PolygonalMesh{dim,N,M,T} <: AbstractPolygonalMesh
+struct PolygonalMesh{dim,N,M,K,T} <: AbstractPolygonalMesh
     cells::Vector{Cell{dim,N,M,T}}
     nodes::Vector{Node{dim,T}}
-    faces::Vector{Face}
+    faces::Vector{Face{K}}
     facesets::Dict{String,Set{Int}}
 end
 
-function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     nodes_m = Matrix{T}(length(mesh.nodes),dim)
     for (k,node) in enumerate(mesh.nodes)
         nodes_m[k,:] = node.x
     end
     nodes_m
 end
-function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     cells_m = Matrix{Int}(getncells(mesh), n_faces_per_cell(mesh))
     for k = 1:getncells(mesh)
         @. cells_m[k,:] = mesh.cells[k].nodes - 1
@@ -79,14 +79,14 @@ end
 
 Return a vector with the coordinates of the vertices of cell number `cell`.
 """
-@inline function get_coordinates(cell::Cell, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+@inline function get_coordinates(cell::Cell, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     coords = Vector{Vec{dim,T}}(N)
     for (i,j) in enumerate(cell.nodes)
         coords[i] = mesh.nodes[j].x
     end
     return coords
 end
-@inline function get_cell_coordinates(cell_idx::Int, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+@inline function get_cell_coordinates(cell_idx::Int, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     coords = Vector{Vec{dim,T}}(N)
     for (i,j) in enumerate(mesh.cells[cell_idx].nodes)
         coords[i] = mesh.nodes[j].x
@@ -94,7 +94,7 @@ end
     return coords
 end
 
-@inline function get_cell_coordinates!(coords::Vector{Vec{dim,T}}, cell_idx::Int, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+@inline function get_cell_coordinates!(coords::Vector{Vec{dim,T}}, cell_idx::Int, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     @assert length(coords) == N
     for (i,j) in enumerate(mesh.cells[cell_idx].nodes)
         coords[i] = mesh.nodes[j].x
@@ -102,7 +102,7 @@ end
     return coords
 end
 
-@inline function get_coordinates(face::Face, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T}
+@inline function get_coordinates(face::Face, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     return [mesh.nodes[j].x for j in face.nodes]::Vector{Vec{dim,T}}
 end
 @inline get_cells(mesh::PolygonalMesh) = mesh.cells
@@ -123,7 +123,7 @@ end
 @inline faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
 @inline cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in face.cells]
 
-function cell_diameter(mesh::PolygonalMesh{dim,N,M,T}, idx::Int) where {dim,N,M,T}
+function cell_diameter(mesh::PolygonalMesh{dim,N,M,NN,T}, idx::Int) where {dim,N,M,NN,T}
     K = get_cells(mesh)[idx]
     h = zero(T)
      for k in K.faces

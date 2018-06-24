@@ -30,7 +30,7 @@ using Tensors
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
-mesh = rectangle_mesh(TriangleCell, (500,500), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
 dim = 2
@@ -130,35 +130,35 @@ K, b = doassemble(Wh, K, dh);
 apply!(K,b,dbc)
 u = K \ b;
 
-# reconstruct!(u_h, u, dh)
+reconstruct!(u_h, u, dh)
 #
 # # ### Compute errors
-# u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-# Etu_h = errornorm(u_h, u_ex, mesh)
-# Etu_h <= 0.0002
+u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
+Etu_h = errornorm(u_h, u_ex, mesh)
+Etu_h <= 0.0002
 
 # ### Plot Solution
 #Plot mesh
-# using PyCall
-# using PyPlot
-# @pyimport matplotlib.tri as mtri
-# m_nodes = get_vertices_matrix(mesh)
-# triangles = get_cells_matrix(mesh)
-# triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
-# PyPlot.triplot(triang, "ko-")
-#
-# nodalu_h = Vector{Float64}(length(mesh.nodes))
-# share_count = zeros(Int,length(mesh.nodes))
-# fill!(nodalu_h,0)
-# for (k,cell) in enumerate(mesh.cells)
-#     for node in cell.nodes
-#         u = value(u_h, k, mesh.nodes[node].x)
-#         nodalu_h[node] += u
-#         share_count[node] += 1
-#     end
-# end
-# nodalu_h = nodalu_h./share_count
-# u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
-# nodalu_h
-# nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
-# PyPlot.tricontourf(triang, nuh)
+using PyCall
+using PyPlot
+@pyimport matplotlib.tri as mtri
+m_nodes = get_vertices_matrix(mesh)
+triangles = get_cells_matrix(mesh)
+triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+PyPlot.triplot(triang, "ko-")
+
+nodalu_h = Vector{Float64}(length(mesh.nodes))
+share_count = zeros(Int,length(mesh.nodes))
+fill!(nodalu_h,0)
+for (k,cell) in enumerate(mesh.cells)
+    for node in cell.nodes
+        u = value(u_h, k, mesh.nodes[node].x)
+        nodalu_h[node] += u
+        share_count[node] += 1
+    end
+end
+nodalu_h = nodalu_h./share_count
+u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
+nodalu_h
+nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
+PyPlot.tricontourf(triang, nuh)

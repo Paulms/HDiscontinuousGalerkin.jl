@@ -27,7 +27,7 @@ function _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
     end
     for (i,k) in enumerate(((2,3),(3,1),(1,2)))
         v1 =  nodes[el_nodes[k[2]]].x - nodes[el_nodes[k[1]]].x
-        n1 = Vec{2}([v1[2], -v1[1]])
+        n1 = Vec{2}((v1[2], -v1[1]))
         normals[i] = n1/norm(n1)
         #Compute faces orientation
         #Just to standarize jump definitions
@@ -35,12 +35,12 @@ function _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
     end
 end
 
-function _build_cells(cells::Vector{Cell{dim,N,M}}, el_nodes, n_el, faces, facesdict,nodes) where {dim,N,M}
-    el_faces = [-1,-1,-1]
+function _build_cells(cells::Vector{Cell{dim,N,M,T}}, el_nodes, el_faces,n_el, faces, facesdict,nodes) where {dim,N,M,T}
+    fill!(el_faces,0)
     #build faces
     for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
-        c_face = [el_nodes[fn_id[1]],el_nodes[fn_id[2]]]
-        element = (minimum(c_face),maximum(c_face))
+        v1 = el_nodes[fn_id[1]]; v2 = el_nodes[fn_id[2]]
+        element = (min(v1,v2),max(v1,v2))
         token = ht_keyindex2!(facesdict, element)
         if token > 0
                 el_faces[i] = facesdict.vals[token]
@@ -49,18 +49,17 @@ function _build_cells(cells::Vector{Cell{dim,N,M}}, el_nodes, n_el, faces, faces
                 end
         else
             Base._setindex!(facesdict, length(faces)+1, element, -token)
-            face = Face([n_el],c_face)
+            face = Face([n_el],(v1,v2))
             push!(faces, face)
             el_faces[i] = length(faces)
         end
     end
     orientation = [true,true,true]
-    normals = fill(zero(Vec{2,Float64}) * Float64(NaN), 3)
+    normals = fill(zero(Vec{2,T}) * T(NaN), 3)
     #check consistent cells orientation and compute normals
     _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
-
     #save cell
-    cell = Cell{dim,N,M,Float64}(el_nodes, (el_faces...), orientation, normals)
+    cell = Cell{dim,N,M,T}(el_nodes, (el_faces...), orientation, normals)
     push!(cells, cell)
 end
 
@@ -94,15 +93,16 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
 
     # Generate cells
     node_array = reshape(collect(1:n_nodes), (n_nodes_x, n_nodes_y))
-    cells = TriangleCell[]
+    cells = TriangleCell{T}[]
     facesdict = Dict{NTuple{2,Int},Int}()
+    el_faces = [0,0,0]
     n_el = 0
     for j in 1:nel_y, i in 1:nel_x
         n_el = n_el + 1
-        _build_cells(cells, (node_array[i,j], node_array[i+1,j], node_array[i,j+1]), n_el, faces, facesdict,nodes) # ◺
+        _build_cells(cells, (node_array[i,j], node_array[i+1,j], node_array[i,j+1]), el_faces,n_el, faces, facesdict,nodes) # ◺
 
         n_el = n_el + 1
-        _build_cells(cells, (node_array[i+1,j], node_array[i+1,j+1], node_array[i,j+1]), n_el, faces, facesdict,nodes) # ◹
+        _build_cells(cells, (node_array[i+1,j], node_array[i+1,j+1], node_array[i,j+1]), el_faces,n_el, faces, facesdict,nodes) # ◹
     end
 
     # Add faces sets
@@ -110,16 +110,16 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     rightSet = Set{Int}()
     topSet = Set{Int}()
     leftSet = Set{Int}()
-    for (k, face) in enumerate(faces)
+    for k in 1:length(faces)
         ref = 0
-        if length(face.cells) == 1
-            if (nodes[face.nodes[1]].x[2] == LL[2] && nodes[face.nodes[2]].x[2] == LL[2])
+        if length(faces[k].cells) == 1
+            if (nodes[faces[k].nodes[1]].x[2] == LL[2] && nodes[faces[k].nodes[2]].x[2] == LL[2])
                 push!(bottomSet, k)
-            elseif (nodes[face.nodes[1]].x[1] == UR[1] && nodes[face.nodes[2]].x[1] == UR[1])
+            elseif (nodes[faces[k].nodes[1]].x[1] == UR[1] && nodes[faces[k].nodes[2]].x[1] == UR[1])
                 push!(rightSet, k)
-            elseif (nodes[face.nodes[1]].x[2] == UR[2] && nodes[face.nodes[2]].x[2] == UR[2])
+            elseif (nodes[faces[k].nodes[1]].x[2] == UR[2] && nodes[faces[k].nodes[2]].x[2] == UR[2])
                 push!(topSet, k)
-            elseif (nodes[face.nodes[1]].x[1] == LL[1] && nodes[face.nodes[2]].x[1] == LL[1])
+            elseif (nodes[faces[k].nodes[1]].x[1] == LL[1] && nodes[faces[k].nodes[2]].x[1] == LL[1])
                 push!(leftSet, k)
             else
                 throw("Face $k belongs to one cell but is not in boundary")
@@ -128,5 +128,5 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     end
     facesets = Dict("bottom"=>bottomSet, "right"=>rightSet,"left"=>leftSet,
                     "top"=>topSet,"boundary"=>union(bottomSet,rightSet,leftSet,topSet))
-    return PolygonalMesh{2,3,3,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
+    return PolygonalMesh{2,3,3,2,T}(cells, nodes, faces, facesets)
 end

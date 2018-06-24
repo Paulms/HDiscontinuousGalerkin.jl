@@ -3,14 +3,14 @@
 
 Construct a `DofHandler` based on the grid `grid`.
 """
-struct DofHandler{dim,T,shape,N,M,K}
+struct DofHandler{dim,T,shape,N,M,L,K}
     variables::Vector{TrialFunction{dim,T,shape,K}}
     cell_dofs::Vector{Int}
     cell_dofs_offset::Vector{Int}
-    mesh::PolygonalMesh{dim,N,M,T}
+    mesh::PolygonalMesh{dim,N,M,L,T}
 end
 
-function DofHandler(varSet::Vector{TrialFunction{dim,T,shape,K}}, mesh::PolygonalMesh{dim,N,M,T}) where {dim,N,M,T,shape,K}
+function DofHandler(varSet::Vector{TrialFunction{dim,T,shape,K}}, mesh::PolygonalMesh{dim,N,M,L,T}) where {dim,N,M,L,T,shape,K}
     dofhandler = DofHandler(varSet, Int[], Int[], mesh)
     _distribute_dofs(dofhandler)
 end

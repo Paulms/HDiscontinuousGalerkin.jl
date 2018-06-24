@@ -53,21 +53,22 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
         n_faces = 0
         boundary_faces = Set{Int}()
         facesdict = Dict{NTuple{2,Int},Int}()
+        el_faces = [0,0,0]
         for ln in eachline(f)
             m = match(r"^\s*(?:#|$)", ln)
             if m == nothing
                 if (first_line)   #skip first line
                     first_line = false
                 else
+                    fill!(el_faces,0)
                     n_el = n_el + 1
                     #parse nodes
                     pln = collect(read_line(ln, (Int,Int,Int,Int)))
-                    el_nodes = pln[2:4]
-                    el_faces = [-1,-1,-1]
+                    el_nodes = (pln[2:4]...)
                     #build faces
                     for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
-                        c_face = [el_nodes[fn_id[1]],el_nodes[fn_id[2]]]
-                        element = (minimum(c_face),maximum(c_face))
+                        v1 = el_nodes[fn_id[1]]; v2 = el_nodes[fn_id[2]]
+                        element = (min(v1,v2),max(v1,v2))
                         token = ht_keyindex2!(facesdict, element)
                         if token > 0
                             el_faces[i] = facesdict.vals[token]
@@ -80,7 +81,7 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                             if token2 > 0
                                 ref = faces_ref.vals[token2]
                             end
-                            face = Face([n_el],c_face)
+                            face = Face([n_el],(v1,v2))
                             push!(faces, face)
                             n_faces = n_faces + 1
                             el_faces[i] = n_faces
@@ -96,9 +97,7 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                     _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
 
                     #save cell
-                    N = length(el_nodes)
-                    M = length(el_faces)
-                    cell = Cell(NTuple{N}(el_nodes), NTuple{M}(el_faces), orientation, normals)
+                    cell = Cell{2,3,3,Float64}(el_nodes, (el_faces...), orientation, normals)
                     push!(cells, cell)
                 end
             end
@@ -115,11 +114,11 @@ Ex: `parse_mesh_triangle("figure.1")`
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces_ref = Dict{NTuple{2,Int},Int}()
-    faces = Vector{Face}()
+    faces = Vector{Face{2}}()
     cells = Vector{Cell}()
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_ref, root_file)
     parse_cells!(cells, faces, faces_ref,facesets,nodes, root_file)
-    PolygonalMesh{2,3,3,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
+    PolygonalMesh{2,3,3,2,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end
