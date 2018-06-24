@@ -35,7 +35,7 @@ function _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
     end
 end
 
-function _build_cells(cells, el_nodes, n_el, faces, facesdict,nodes)
+function _build_cells(cells::Vector{Cell{dim,N,M}}, el_nodes, n_el, faces, facesdict,nodes) where {dim,N,M}
     el_faces = [-1,-1,-1]
     #build faces
     for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
@@ -60,7 +60,7 @@ function _build_cells(cells, el_nodes, n_el, faces, facesdict,nodes)
     _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
 
     #save cell
-    cell = Cell(el_nodes, (el_faces...), orientation, normals)
+    cell = Cell{dim,N,M,Float64}(el_nodes, (el_faces...), orientation, normals)
     push!(cells, cell)
 end
 
@@ -91,7 +91,6 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     _generate_2d_nodes!(nodes, n_nodes_x, n_nodes_y, LL, LR, UR, UL)
 
     faces = Vector{Face}()
-    cells = Vector{Cell}()
 
     # Generate cells
     node_array = reshape(collect(1:n_nodes), (n_nodes_x, n_nodes_y))
