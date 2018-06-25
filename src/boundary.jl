@@ -22,7 +22,7 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
             @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
             cell_idx = face.cells[1]
             cell = mesh.cells[cell_idx]
-            face_lidx = find(x -> x == face_idx,cell.faces)[1]
+            face_lidx = findall(x -> x == face_idx,cell.faces)[1]
             orientation = face_orientation(mesh, cell_idx, face_lidx)
             N = zero(T)
             coords = get_coordinates(cell, mesh)
@@ -72,7 +72,7 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
             @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
             cell = dh.mesh.cells[face.cells[1]]
             cell_idx = face.cells[1]
-            face_lidx = find(x -> x == face_idx,cell.faces)[1]
+            face_lidx = findall(x -> x == face_idx,cell.faces)[1]
             l_dof = Int[]
             offset::Int = dh.cell_dofs_offset[cell_idx] - 1 + field_offset(dh, field)
             for j = 1:2 #Add vertex dofs

@@ -211,7 +211,7 @@ function shape_gradient(fs::VectorFunctionSpace{dim,T,2}, q_point::Int, base_fun
     dN_comp = zeros(T, dim, dim)
     n = size(fs.ssp.N,1)
     dN_comp[div(base_func,n+1)+1, :] = fs.ssp.dNdξ[mod1(base_func,n), q_point]
-    return Tensor{2,dim,T}((dN_comp...)) ⋅ fs.ssp.Jinv[cell,q_point]
+    return Tensor{2,dim,T}((dN_comp...,)) ⋅ fs.ssp.Jinv[cell,q_point]
 end
 
 function shape_gradient(fs::VectorFunctionSpace{dim,T,1}, q_point::Int, base_func::Int, cell::Int)  where {dim,T}
@@ -219,7 +219,7 @@ function shape_gradient(fs::VectorFunctionSpace{dim,T,1}, q_point::Int, base_fun
     dN_comp = zeros(T, dim, dim)
     n = size(fs.ssp.N,1)
     dN_comp[div(base_func,n+1)+1, :] = fs.ssp.dNdξ[mod1(base_func,n), q_point]
-    return Tensor{2,dim,T}((dN_comp...)) ⋅ fs.ssp.Jinv[cell]
+    return Tensor{2,dim,T}((dN_comp...,)) ⋅ fs.ssp.Jinv[cell]
 end
 
 function shape_divergence(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func::Int, cell::Int)  where {dim,T}
