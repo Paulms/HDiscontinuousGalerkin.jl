@@ -17,25 +17,18 @@ function _generate_2d_nodes!(nodes, nx, ny, LL, LR, UR, UL)
     end
 end
 
-function _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
-    a = nodes[el_nodes[2]].x-nodes[el_nodes[1]].x
-    b = nodes[el_nodes[3]].x-nodes[el_nodes[1]].x
+# Check face orientation consistency
+function _check_node_data(nodes, n1,n2,n3)
+    a = nodes[n2].x-nodes[n1].x
+    b = nodes[n3].x-nodes[n1].x
     if (a[1]*b[2]-a[2]*b[1]) < 0
         #swap vertices 2 and 3
-        el_nodes[2],el_nodes[3] = el_nodes[3],el_nodes[2]
-        el_faces = reverse(el_faces)
+        return (n1,n3,n2)
     end
-    for (i,k) in enumerate(((2,3),(3,1),(1,2)))
-        v1 =  nodes[el_nodes[k[2]]].x - nodes[el_nodes[k[1]]].x
-        n1 = Vec{2}((v1[2], -v1[1]))
-        normals[i] = n1/norm(n1)
-        #Compute faces orientation
-        #Just to standarize jump definitions
-        orientation[i] = el_nodes[k[2]] > el_nodes[k[1]]
-    end
+    return (n1,n2,n3)
 end
 
-function _build_cells(cells::Vector{Cell{dim,N,M,T}}, el_nodes, el_faces,n_el, faces, facesdict,nodes) where {dim,N,M,T}
+function _build_cells(cells::Vector{Cell{dim,N,M}}, el_nodes, el_faces,n_el, faces, facesdict,nodes) where {dim,N,M}
     fill!(el_faces,0)
     #build faces
     for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
@@ -54,12 +47,8 @@ function _build_cells(cells::Vector{Cell{dim,N,M,T}}, el_nodes, el_faces,n_el, f
             el_faces[i] = length(faces)
         end
     end
-    orientation = [true,true,true]
-    normals = fill(zero(Vec{2,T}) * T(NaN), 3)
-    #check consistent cells orientation and compute normals
-    _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
     #save cell
-    cell = Cell{dim,N,M,T}(el_nodes, (el_faces...), orientation, normals)
+    cell = Cell{dim,N,M}(el_nodes, (el_faces...))
     push!(cells, cell)
 end
 
@@ -93,16 +82,18 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
 
     # Generate cells
     node_array = reshape(collect(1:n_nodes), (n_nodes_x, n_nodes_y))
-    cells = TriangleCell{T}[]
+    cells = TriangleCell[]
     facesdict = Dict{NTuple{2,Int},Int}()
     el_faces = [0,0,0]
     n_el = 0
     for j in 1:nel_y, i in 1:nel_x
         n_el = n_el + 1
-        _build_cells(cells, (node_array[i,j], node_array[i+1,j], node_array[i,j+1]), el_faces,n_el, faces, facesdict,nodes) # ◺
+        el_nodes = _check_node_data(nodes, node_array[i,j], node_array[i+1,j], node_array[i,j+1])
+        _build_cells(cells, el_nodes, el_faces,n_el, faces, facesdict,nodes) # ◺
 
         n_el = n_el + 1
-        _build_cells(cells, (node_array[i+1,j], node_array[i+1,j+1], node_array[i,j+1]), el_faces,n_el, faces, facesdict,nodes) # ◹
+        el_nodes = _check_node_data(nodes, node_array[i+1,j], node_array[i+1,j+1], node_array[i,j+1])
+        _build_cells(cells, el_nodes, el_faces,n_el, faces, facesdict,nodes) # ◹
     end
 
     # Add faces sets

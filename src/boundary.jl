@@ -20,9 +20,10 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
         let face_idx::Int = face_idx
         if face_idx ∈ faceset
             @assert length(face.cells) == 1 "Face $face_idx is not in boundary"
-            cell = mesh.cells[face.cells[1]]
+            cell_idx = face.cells[1]
+            cell = mesh.cells[cell_idx]
             face_lidx = find(x -> x == face_idx,cell.faces)[1]
-            orientation = face_orientation(cell, face_lidx)
+            orientation = face_orientation(mesh, cell_idx, face_lidx)
             N = zero(T)
             coords = get_coordinates(cell, mesh)
             #Solve system ∫ k ϕiϕj = ∫ f ϕi  we assume basis is orthogonal
@@ -89,7 +90,6 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
                 end
             end
             #TODO: We now assume a nodal base...
-            orientation = face_orientation(cell, face_lidx)
             coords = get_coordinates(cell, dh.mesh)
             for i in l_dof
                 push!(values,f(spatial_nodal_coordinate(get_interpolation(fs),M,i,coords)))

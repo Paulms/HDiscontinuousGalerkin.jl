@@ -14,19 +14,15 @@ get coordinates of a node
 """
 @inline get_coordinates(node::Node) = node.x
 
-struct Cell{dim, N, M, T}
+struct Cell{dim, N, M}
     nodes::NTuple{N,Int}
     faces::NTuple{M,Int}
-    orientation::Vector{Bool}
-    normals::Vector{Vec{dim,T}}
 end
 
 #Common cell types
 const TriangleCell = Cell{2,3,3}
 @inline get_cell_name(::TriangleCell) = "Triangle"
 @inline getnfaces(cell::Cell{dim,N,M}) where {dim,N,M} = M
-@inline get_normal(cell::Cell, face::Int) = cell.normals[face]
-@inline face_orientation(cell::Cell, face::Int) = cell.orientation[face]
 function topology_elements(cell::Cell{2},element::Int)
     if element == 0
         return cell.nodes
@@ -48,10 +44,15 @@ struct Face{K}
 end
 
 struct PolygonalMesh{dim,N,M,K,T} <: AbstractPolygonalMesh
-    cells::Vector{Cell{dim,N,M,T}}
+    cells::Vector{Cell{dim,N,M}}
     nodes::Vector{Node{dim,T}}
     faces::Vector{Face{K}}
     facesets::Dict{String,Set{Int}}
+end
+
+function face_orientation(mesh::PolygonalMesh{2,3,3}, cell_idx::Int, face_idx::Int)
+    k = reference_edge_nodes(RefTetrahedron, Val{2})[face_idx]
+    return mesh.cells[cell_idx].nodes[k[2]] > mesh.cells[cell_idx].nodes[k[1]]
 end
 
 function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}

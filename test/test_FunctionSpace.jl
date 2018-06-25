@@ -42,6 +42,7 @@ const sq3 = sqrt(3)
 @test Wh.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
 @test Wh.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
 @test Wh.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
+@test Wh.normals[1,:,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
 
 # ### Boundary conditions
 dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
@@ -141,7 +142,7 @@ function doassemble(Vh, Wh, Mh, τ = 1)
         for face_idx in 1:getnfaces(mesh.cells[cell_idx])
             for q_point in 1:getnfacequadpoints(Wh)
                 dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
-                orientation = face_orientation(mesh.cells[cell_idx], face_idx)
+                orientation = face_orientation(mesh, cell_idx, face_idx)
                 for i in 1:n_basefuncs_s
                     w = face_shape_value(Wh, face_idx, q_point, i)
                     for j in 1:n_basefuncs_s
@@ -157,9 +158,9 @@ function doassemble(Vh, Wh, Mh, τ = 1)
                     end
                 end
                 dS = getdetJdS(Mh, cell_idx, face_idx, q_point)
+                n = get_normal(Vh, cell_idx, face_idx)
                 for i in 1:n_basefuncs
                     v = face_shape_value(Vh, face_idx, q_point, i, orientation)
-                    n = get_normal(mesh.cells[cell_idx], face_idx)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T û(v⋅n)  dS

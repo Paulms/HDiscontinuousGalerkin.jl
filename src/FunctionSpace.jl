@@ -8,6 +8,7 @@ struct ScalarFunctionSpace{dim,T<:Real,NN,refshape<:AbstractRefShape,fdim,order,
     Jinv::Matrix{Tensor{2,dim,T,M}}
     M::Matrix{T}
     L::Array{T,3}
+    normals::Array{Vec{dim,T},3}
     qr_weights::Vector{T}
     qr_face_weigths::Vector{T}
     qr_face_points::Vector{Vec{fdim,T}}
@@ -35,6 +36,14 @@ end
 @inline reference_coordinate(fs::ScalarFunctionSpace{dim,T},cell::Int, mesh::PolygonalMesh, x::Vec{dim,T}) where {dim,T} = fs.Jinv[cell]⋅(x-mesh.nodes[mesh.cells[cell].nodes[1]].x)
 @inline get_interpolation(fs::ScalarFunctionSpace) = fs.interpolation
 @inline getnlocaldofs(fs::ScalarFunctionSpace) = getnbasefunctions(fs)
+
+"""
+    getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
+Return the normal at the quadrature point `qp` for the face `face` at
+cell `cell` of the `ScalarFunctionSpace` object.
+"""
+@inline get_normal(fs::ScalarFunctionSpace{dim,T,2}, cell::Int, face::Int, qp::Int) where {dim,T} = fs.normals[cell, face, qp]
+@inline get_normal(fs::ScalarFunctionSpace{dim,T,1}, cell::Int, face::Int) where {dim,T} = fs.normals[cell, face]
 
 """
 function spatial_coordinate(fs::ScalarFunctionSpace{dim}, face::Int, q_point::Int, x::AbstractVector{Vec{dim,T}}, orientation=true)
@@ -126,6 +135,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
     detJf = fill(T(NaN), n_cells, n_faces, Jfdim)
     Jinv = fill(zero(Tensor{2,dim,T}) * T(NaN), n_cells, Jdim)
     coords = fill(zero(Vec{dim,T}) * T(NaN), n_nodes_per_cell(mesh))
+    normals = fill(zero(Vec{dim,T}) * T(NaN), n_cells, n_faces, Jfdim)
     #Precompute detJ and invJ
     for k in 1:n_cells
         x = get_cell_coordinates!(coords,k, mesh)
@@ -147,6 +157,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
                 end
                 weight_norm = weighted_normal(fef_J, l, shape, Val{dim})
                 detJ_f = norm(weight_norm)
+                normals[k,l,i] = weight_norm / detJ_f
                 detJ_f > 0.0 || throw(ArgumentError("det(Jf) is not positive: det(Jf) = $(detJ_f)"))
                 detJf[k,l,i] = detJ_f
             end
@@ -154,16 +165,7 @@ function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh, order, quad_rule::Q
     end
     MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
     ScalarFunctionSpace{dim,T,NN,shape,dim1,order,MM}(N, dNdξ, E, detJ, detJf, Jinv,
-    M, L, getweights(quad_rule), q_ref_faceweights, q_ref_facepoints, func_interpol)
-end
-
-function weighted_normal(J::Tensor{2,2}, face::Int, ::Type{RefTetrahedron}, ::Type{Val{2}})
-    @inbounds begin
-        face == 1 && return Vec{2}((-(J[2,1] - J[2,2]), J[1,1] - J[1,2]))
-        face == 2 && return Vec{2}((-J[2,2], J[1,2]))
-        face == 3 && return Vec{2}((J[2,1], -J[1,1]))
-    end
-    throw(ArgumentError("unknown face number: $face"))
+    M, L, normals, getweights(quad_rule), q_ref_faceweights, q_ref_facepoints, func_interpol)
 end
 
 # VectorFunctionSpace
@@ -177,6 +179,15 @@ end
 @inline getnbasefunctions(fs::VectorFunctionSpace) = fs.n_dof
 @inline getnlocaldofs(fs::VectorFunctionSpace) = fs.n_dof
 @inline get_interpolation(fs::VectorFunctionSpace) = fs.ssp.interpolation
+
+"""
+    getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
+Return the normal at the quadrature point `qp` for the face `face` at
+cell `cell` of the `ScalarFunctionSpace` object.
+"""
+@inline get_normal(fs::VectorFunctionSpace{dim,T,2}, cell::Int, face::Int, qp::Int) where {dim,T} = get_normal(fs.ssp, cell, face, qp)
+@inline get_normal(fs::VectorFunctionSpace{dim,T,1}, cell::Int, face::Int) where {dim,T} = get_normal(fs.ssp, cell, face)
+
 
 function shape_value(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func::Int) where {dim,T}
     @assert 1 <= base_func <= fs.n_dof "invalid base function index: $base_func"

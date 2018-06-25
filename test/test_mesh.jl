@@ -17,8 +17,7 @@ end
 # Check expected data for cell 1
 @test mesh.cells[1].nodes == (2,3,5)
 @test mesh.cells[1].faces == (1,2,3)
-@test mesh.cells[1].orientation == [true,false,true]
-@test mesh.cells[1].normals ≈ [Vec{2}([-sqrt(2)/2,sqrt(2)/2]), Vec{2}([-sqrt(2)/2,-sqrt(2)/2]), Vec{2}([1.0,0.0])]
+@test [face_orientation(mesh,1,i) for i in 1:3] == [true,false,true]
 @test cell_diameter(mesh,1) == 1.0
 @test get_faceset(mesh, "boundary") == Set([3,6,7,8])
 @test get_coordinates(mesh.faces[1], mesh) == [Vec{2}([1.0, 1.0]), Vec{2}([0.5, 0.5])]
@@ -37,8 +36,7 @@ end
 # Check expected data for cell 1
 @test mesh.cells[1].nodes == (1,2,4)
 @test mesh.cells[1].faces == (1,2,3)
-@test mesh.cells[1].orientation == [true,false,true]
-@test mesh.cells[1].normals ≈ [Vec{2}([sqrt(2)/2,sqrt(2)/2]), Vec{2}([-1.0,0.0]), Vec{2}([0.0,-1.0])]
+@test [face_orientation(mesh,1,i) for i in 1:3] == [true,false,true]
 @test cell_diameter(mesh,1) == sqrt(2)/2
 @test get_faceset(mesh, "boundary") == Set([3,7,9,16,2,11,12,15])
 @test getnfaces(mesh.cells[1]) == 3

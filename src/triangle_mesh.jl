@@ -64,7 +64,7 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                     n_el = n_el + 1
                     #parse nodes
                     pln = collect(read_line(ln, (Int,Int,Int,Int)))
-                    el_nodes = (pln[2:4]...)
+                    el_nodes = _check_node_data(nodes, pln[2:4]...)
                     #build faces
                     for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
                         v1 = el_nodes[fn_id[1]]; v2 = el_nodes[fn_id[2]]
@@ -91,13 +91,8 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                             end
                         end
                     end
-                    orientation = [true,true,true]
-                    normals = fill(zero(Vec{2,Float64}) * Float64(NaN), 3)
-                    #check consistent cells orientation and compute normals
-                    _build_face_data(nodes, el_nodes, el_faces, normals, orientation)
-
                     #save cell
-                    cell = Cell{2,3,3,Float64}(el_nodes, (el_faces...), orientation, normals)
+                    cell = Cell{2,3,3}(el_nodes, (el_faces...))
                     push!(cells, cell)
                 end
             end
@@ -115,7 +110,7 @@ function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces_ref = Dict{NTuple{2,Int},Int}()
     faces = Vector{Face{2}}()
-    cells = Vector{Cell}()
+    cells = Vector{TriangleCell}()
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_ref, root_file)

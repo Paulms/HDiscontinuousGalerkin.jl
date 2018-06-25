@@ -1,3 +1,6 @@
+#########################
+# All RefTetrahedron   #
+#########################
 struct RefTetrahedron <: AbstractRefShape end
 @inline get_num_faces(::Type{RefTetrahedron}, ::Type{Val{dim}}) where {dim} = dim + 1
 @inline get_num_vertices(::Type{RefTetrahedron}, ::Type{Val{dim}}) where {dim} = dim + 1
@@ -72,6 +75,15 @@ function _interior_points(verts, order)
         push!(pts,res)
     end
     pts
+end
+
+function weighted_normal(J::Tensor{2,2}, face::Int, ::Type{RefTetrahedron}, ::Type{Val{2}})
+    @inbounds begin
+        face == 1 && return Vec{2}((-(J[2,1] - J[2,2]), J[1,1] - J[1,2]))
+        face == 2 && return Vec{2}((-J[2,2], J[1,2]))
+        face == 3 && return Vec{2}((J[2,1], -J[1,1]))
+    end
+    throw(ArgumentError("unknown face number: $face"))
 end
 
 """ Compute volume of a simplex spanned by vertices `verts` """
