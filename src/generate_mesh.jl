@@ -17,6 +17,9 @@ function _generate_2d_nodes!(nodes, nx, ny, LL, LR, UR, UL)
     end
 end
 
+#########################
+# Triangle Cells 2D   #
+#########################
 # Check face orientation consistency
 function _check_node_data(nodes, n1,n2,n3)
     a = nodes[n2].x-nodes[n1].x
@@ -28,10 +31,10 @@ function _check_node_data(nodes, n1,n2,n3)
     return (n1,n2,n3)
 end
 
-function _build_cells(cells::Vector{Cell{dim,N,M}}, el_nodes, el_faces,n_el, faces, facesdict,nodes) where {dim,N,M}
+function _build_cells(cells::Vector{TriangleCell}, el_nodes, el_faces,n_el, faces, facesdict,nodes)
     fill!(el_faces,0)
     #build faces
-    for (i,fn_id) in enumerate(((2,3),(3,1),(1,2)))
+    for (i,fn_id) in enumerate(reference_edge_nodes(RefTetrahedron, Val{2}))
         v1 = el_nodes[fn_id[1]]; v2 = el_nodes[fn_id[2]]
         element = (min(v1,v2),max(v1,v2))
         token = ht_keyindex2!(facesdict, element)
@@ -48,7 +51,7 @@ function _build_cells(cells::Vector{Cell{dim,N,M}}, el_nodes, el_faces,n_el, fac
         end
     end
     #save cell
-    cell = Cell{dim,N,M}(el_nodes, (el_faces...))
+    cell = TriangleCell(el_nodes, (el_faces...))
     push!(cells, cell)
 end
 
