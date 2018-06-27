@@ -51,7 +51,7 @@ function _build_cells(cells::Vector{TriangleCell}, el_nodes, el_faces,n_el, face
         end
     end
     #save cell
-    cell = TriangleCell(el_nodes, (el_faces...))
+    cell = TriangleCell(el_nodes, (el_faces...,))
     push!(cells, cell)
 end
 
