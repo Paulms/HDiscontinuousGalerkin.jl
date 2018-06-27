@@ -30,14 +30,14 @@ using Tensors
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
-mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)));
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}());
 
 # Declare variables
-u_h = TrialFunction(Wh, mesh)
+u_h = TrialFunction(Wh, mesh);
 
 # ### Degrees of freedom
 # Next we need to define a `DofHandler`, which will take care of numbering
@@ -45,7 +45,7 @@ u_h = TrialFunction(Wh, mesh)
 # We create the `DofHandler` and then add a single field called `u`.
 # Lastly we `close!` the `DofHandler`, it is now that the dofs are distributed
 # for all the elements.
-dh = DofHandler([u_h], mesh)
+dh = DofHandler([u_h], mesh);
 
 # Now that we have distributed all our dofs we can create our tangent matrix,
 # using `create_sparsity_pattern`. This function returns a sparse matrix
@@ -56,11 +56,11 @@ K = create_sparsity_pattern(dh);
 # By default the stored values are set to $0$, so we first need to
 # fill the stored values, e.g. `K.nzval` with something meaningful.
 using UnicodePlots
-fill!(K.nzval, 1.0)
+fill!(K.nzval, 1.0);
 spy(K; height = 15)
 
 # ### Boundary conditions
-dbc = Dirichlet(u_h, dh, "boundary", x -> 0)
+dbc = Dirichlet(u_h, dh, "boundary", x -> 0);
 
 # ### RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -75,7 +75,7 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     Ke = zeros(n_basefuncs, n_basefuncs)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
-    cell_dofs = Vector{Int}(ndofs_per_cell(dh))
+    cell_dofs = Vector{Int}(undef, ndofs_per_cell(dh))
     assembler = start_assemble(K, b)
 
     # Next we define the global force vector `f` and
@@ -127,10 +127,10 @@ K, b = doassemble(Wh, K, dh);
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-apply!(K,b,dbc)
+apply!(K,b,dbc);
 u = K \ b;
 
-reconstruct!(u_h, u, dh)
+reconstruct!(u_h, u, dh);
 #
 # # ### Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])

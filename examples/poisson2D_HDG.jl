@@ -26,6 +26,7 @@
 using HDiscontinuousGalerkin
 using Tensors
 using BlockArrays
+using LinearAlgebra
 
 # Load mesh
 #To load mesh from triangle
@@ -33,21 +34,21 @@ using BlockArrays
 #@time mesh = parse_mesh_triangle(root_file)
 
 #or use internal mesh
-@time mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+@time mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)));
 
 # ### Initiate function Spaces
 dim = 2
-@time Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
+@time Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}());
+Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}());
+Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}());
 
 # Declare variables
-@time û_h = TrialFunction(Mh, mesh)
-σ_h = TrialFunction(Vh, mesh)
-u_h = TrialFunction(Wh, mesh)
+@time û_h = TrialFunction(Mh, mesh);
+σ_h = TrialFunction(Vh, mesh);
+u_h = TrialFunction(Wh, mesh);
 
 # ### Boundary conditions
-@time dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
+@time dbc = Dirichlet(û_h, mesh, "boundary", x -> 0);
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -68,13 +69,13 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
 
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(undef, getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0.0)
     ff = interpolate(f, Wh, mesh)
 
     # Preallocate vectors to store data for u and σ recovery
-    K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
-    b_element = Array{AbstractVector{Float64}}(getncells(mesh))
+    K_element = Array{AbstractMatrix{Float64}}(undef, getncells(mesh))
+    b_element = Array{AbstractVector{Float64}}(undef, getncells(mesh))
 
     for cell_idx in 1:getncells(mesh)
         fill!(Ae, 0)
@@ -209,13 +210,13 @@ end
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-@time apply!(K,b,dbc)
+@time apply!(K,b,dbc);
 #using IterativeSolvers
 #û = gmres(K,b)
 û = K \ b;
 
 #Now we recover original variables from skeleton û
-@time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
+@time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh);
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)
@@ -232,7 +233,7 @@ PyPlot.triplot(triang, "ko-")
 
 #Plot avg(u_h)
 # We need avg since u_h is discontinuous
-nodalu_h = Vector{Float64}(length(mesh.nodes))
+nodalu_h = Vector{Float64}(undef, length(mesh.nodes))
 share_count = zeros(Int,length(mesh.nodes))
 fill!(nodalu_h,0)
 for (k,cell) in enumerate(mesh.cells)
@@ -244,9 +245,6 @@ for (k,cell) in enumerate(mesh.cells)
 end
 nodalu_h = nodalu_h./share_count
 PyPlot.tricontourf(triang, nodalu_h)
-
-
-
 
 # ### Exporting to VTK
 # To visualize the result we export the grid and our field `u`

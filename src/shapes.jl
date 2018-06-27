@@ -93,5 +93,5 @@ function volume(verts::Vector{Vec{N, T}}) where {N,T}
     ref_verts = reference_coordinates(RefTetrahedron, Val{n})
     A, b = get_affine_map(ref_verts, verts)
     F = svd(A)
-    return *(F[2]...)/factorial(n)
+    return *(F.S...)/factorial(n)
 end

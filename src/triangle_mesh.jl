@@ -1,6 +1,6 @@
 # Read mesh from a triangle generated file
 function read_line(ln, types)
-    m2 = matchall(r"\b((\d*\.)?\d+)\b", ln)
+    m2 = collect((m.match for m = eachmatch(r"\b((\d*\.)?\d+)\b", ln, overlap=false)))
     return (parse(types[i],x) for (i,x) in enumerate(m2))
 end
 

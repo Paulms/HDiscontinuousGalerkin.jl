@@ -13,8 +13,8 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
     n_dof = getnbasefunctions(fs)
     n_qpoints = getnquadpoints(fs)
     n_faces = length(faceset)
-    prescribed_dofs = Vector{Int}(n_faces*n_dof)
-    values = Vector{T}(n_faces*n_dof)
+    prescribed_dofs = Vector{Int}(undef, n_faces*n_dof)
+    values = Vector{T}(undef, n_faces*n_dof)
     k = 0
     for (face_idx, face) in enumerate(get_faces(mesh))
         let face_idx::Int = face_idx
@@ -148,7 +148,7 @@ function zero_out_columns!(K, dofs::Vector{Int}) # can be removed in 0.7 with #2
     #@debug assert(issorted(dofs))
     for col in dofs
         r = nzrange(K, col)
-        K.nzval[r] = 0.0
+        K.nzval[r] .= 0.0
     end
 end
 

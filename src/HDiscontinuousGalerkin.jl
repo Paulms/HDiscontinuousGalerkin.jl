@@ -4,6 +4,9 @@ module HDiscontinuousGalerkin
 
 using Tensors
 using FastGaussQuadrature
+using SparseArrays
+using LinearAlgebra
+
 import Base:@propagate_inbounds
 
 abstract type AbstractRefShape end

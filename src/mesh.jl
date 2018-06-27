@@ -56,14 +56,14 @@ function face_orientation(mesh::PolygonalMesh{2,3,3}, cell_idx::Int, face_idx::I
 end
 
 function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
-    nodes_m = Matrix{T}(length(mesh.nodes),dim)
+    nodes_m = Matrix{T}(undef,length(mesh.nodes),dim)
     for (k,node) in enumerate(mesh.nodes)
         nodes_m[k,:] = node.x
     end
     nodes_m
 end
 function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
-    cells_m = Matrix{Int}(getncells(mesh), n_faces_per_cell(mesh))
+    cells_m = Matrix{Int}(undef, getncells(mesh), n_faces_per_cell(mesh))
     for k = 1:getncells(mesh)
         @. cells_m[k,:] = mesh.cells[k].nodes - 1
     end
@@ -81,7 +81,7 @@ end
 Return a vector with the coordinates of the vertices of cell number `cell`.
 """
 @inline function get_coordinates(cell::Cell, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
-    coords = Vector{Vec{dim,T}}(N)
+    coords = Vector{Vec{dim,T}}(undef, N)
     for (i,j) in enumerate(cell.nodes)
         coords[i] = mesh.nodes[j].x
     end

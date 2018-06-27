@@ -224,7 +224,7 @@ end
 
 function shape_divergence(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func::Int, cell::Int)  where {dim,T}
     @assert 1 <= base_func <= fs.n_dof "invalid base function index: $base_func"
-    return trace(shape_gradient(fs, q_point, base_func, cell))
+    return tr(shape_gradient(fs, q_point, base_func, cell))
 end
 
 function VectorFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},

@@ -11,9 +11,9 @@ function _compute_p_w(s, n, T = Float64)
     d = 2 * s + 1
     k = 0
     nnodes = binomial(n + s + 1, s)
-    weights = Vector{T}(nnodes)
+    weights = Vector{T}(undef, nnodes)
     kk = nnodes
-    points = Vector{Vec{n,T}}(nnodes)
+    points = Vector{Vec{n,T}}(undef, nnodes)
     exponentials = _get_all_exponentials(s, n+1)
     for i = 0:s
         w::T = ((-1)^i * 2.0^(-2*s) * (d+n-2*i)^d)/(factorial(i) * factorial(d+n-i))
@@ -27,12 +27,12 @@ function _compute_p_w(s, n, T = Float64)
 end
 
 function _get_all_exponentials(n,k)
-    a = Vector{Int32}(k)
-    exponentials = Vector{typeof(a)}(binomial(n+2,k-1))
+    a = Vector{Int32}(undef, k)
+    exponentials = Vector{typeof(a)}(undef,binomial(n+2,k-1))
     t::Int32 = n
     h = 0
     a[1] = n
-    a[2:k] = 0
+    a[2:k] .= 0
     exponentials[1] = copy(a)
     idx = 2
     while a[k] != n

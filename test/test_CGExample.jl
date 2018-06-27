@@ -1,5 +1,7 @@
 using HDiscontinuousGalerkin
 using Tensors
+using SparseArrays
+
 mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
@@ -29,7 +31,7 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     Ke = zeros(n_basefuncs, n_basefuncs)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
-    cell_dofs = Vector{Int}(ndofs_per_cell(dh))
+    cell_dofs = Vector{Int}(undef, ndofs_per_cell(dh))
     assembler = start_assemble(K, b)
 
     # Next we define the global force vector `f` and

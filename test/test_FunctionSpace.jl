@@ -6,6 +6,7 @@
 using HDiscontinuousGalerkin
 using Tensors
 using BlockArrays
+using LinearAlgebra
 
 # Load mesh
 root_file = "mesh/figure2.1"
@@ -52,17 +53,17 @@ f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh, mesh)
 @test errornorm(ff,f,mesh) <= eps(Float64)
 
-Be_ex=Vector{Matrix{Float64}}(4)
+Be_ex=Vector{Matrix{Float64}}(undef, 4)
 Be_ex[1] = [0 0 0; 0 0 0; -3*sq2 0 0; 0.0 0 0; sqrt(6) 0 0; 0 0 0]
 Be_ex[2] = [0 0 0; 0 0 0; 3*sq2 0 0; 0.0 0 0; -sqrt(6) 0 0; 0 0 0]
 Be_ex[3] = [0 0 0; sqrt(6)/2 0 0; -3/2*sq2 0 0; 0 0 0; 3/2*sqrt(6) 0 0; 3/2*sq2 0 0]
 Be_ex[4] = [0 0 0; sqrt(6) 0 0; 0 0 0; 0.0 0 0; 0 0 0; 3*sq2 0 0]
-Ce_ex=Vector{Matrix{Float64}}(4)
+Ce_ex=Vector{Matrix{Float64}}(undef, 4)
 Ce_ex[1] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Ce_ex[2] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Ce_ex[3] = [2*sq2+2 sqrt(6)-sqrt(3) sq2-1; sqrt(6)-sqrt(3)  4*sq2+4 0; sq2-1 0 4*sq2+4]
 Ce_ex[4] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
-Ee_ex=Vector{Matrix{Float64}}(4)
+Ee_ex=Vector{Matrix{Float64}}(undef, 4)
 Ee_ex[1] = -[sq2/2 0 sq2/2 0 -sq2 0; sq3/2 -1/2 -sq3/2 1/2 0 -2; 1/2 sq3/2 1/2 sq3/2 2 0;
            -sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2  1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0]
 Ee_ex[2] = -[-sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2 -1/2 0 -2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0;
@@ -71,7 +72,7 @@ Ee_ex[3] = -[0 0 sq2/2 0 -sq2/2 0; 0 0 -sq3/2  -1/2 0 1; 0 0 1/2 -sq3/2 1 0;
             -sq2 0 sq2/2 0 sq2/2 0; -sq3 1 -sq3/2 -1/2 0 -1; -1 -sq3 1/2 -sq3/2 -1 0]
 Ee_ex[4] = -[-sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2 1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0;
            -sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2  -1/2 0 2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0]
-He_ex=Vector{Matrix{Float64}}(4)
+He_ex=Vector{Matrix{Float64}}(undef, 4)
 He_ex[1] = [sq2/2 0 0 0 0 0 ;0 sq2/2 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1]
 He_ex[3] = [1 0 0 0 0 0 ;0 1 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 sq2/2 0; 0 0 0 0 0 sq2/2]
 He_ex[2] = He_ex[1]
@@ -95,10 +96,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
 
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(undef, getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0)
-    K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
-    b_element = Array{AbstractVector{Float64}}(getncells(mesh))
+    K_element = Array{AbstractMatrix{Float64}}(undef, getncells(mesh))
+    b_element = Array{AbstractVector{Float64}}(undef, getncells(mesh))
 
     for cell_idx in 1:getncells(mesh)
         fill!(Ae, 0)

@@ -150,7 +150,7 @@ end
 
 function celldofs!(global_dofs::Vector{Int}, dh::DofHandler, i::Int)
     @assert length(global_dofs) == ndofs_per_cell(dh, i)
-    unsafe_copy!(global_dofs, 1, dh.cell_dofs, dh.cell_dofs_offset[i], length(global_dofs))
+    unsafe_copyto!(global_dofs, 1, dh.cell_dofs, dh.cell_dofs_offset[i], length(global_dofs))
     return global_dofs
 end
 
