@@ -35,3 +35,23 @@ function integrate(f::Function,qr::QuadratureRule)
     end
     int_val
 end
+
+@static if VERSION < v"0.7.0-DEV.2563"
+    const ht_keyindex2! = Base.ht_keyindex2
+else
+    import Base.ht_keyindex2!
+end
+
+mutable struct ScalarWrapper{T}
+    x::T
+end
+
+@inline Base.getindex(s::ScalarWrapper) = s.x
+@inline Base.setindex!(s::ScalarWrapper, v) = s.x = v
+Base.copy(s::ScalarWrapper{T}) where {T} = ScalarWrapper{T}(copy(s.x))
+
+#See zchop.jl
+zcheck(x::T, eps=1e-14) where {T<:Real} =
+    abs(x) > convert(T,eps) ? x : zero(T)
+zcheck!(a::T, eps=1e-14) where {T<:AbstractArray} =
+    (@inbounds for i in 1:length(a) a[i] = zcheck(a[i],eps) end ; a)

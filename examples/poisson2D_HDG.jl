@@ -1,90 +1,63 @@
-# Test using Poisson problem
-# -Δu = f  in Ω
-#   u = 0  on Γ = ∂Ω
-# where f = sin(πx)⋅sin(πy)
+# Here we solve the equation on a unit square, with a uniform internal source.
+# The strong form of the (linear) heat equation is given by
+#
+# ```math
+#  -\nabla \cdot (k \nabla u) = f  \quad x \in \Omega,
+# ```
+#
+# where $u$ is the unknown temperature field, $k$ the heat conductivity,
+# $f$ the heat source and $\Omega$ the domain. For simplicity we set $f = 1$
+# and $k = 1$. We will consider homogeneous Dirichlet boundary conditions such that
+# ```math
+# u(x) = 0 \quad x \in \partial \Omega,
+# ```
+# where $\partial \Omega$ denotes the boundary of $\Omega$.
+#
+# The HDG weak form is given by
+# ```math
+#(\vec{\sigma}_{h},\vec{v_{h}})_{\tau_{h}}-(u_{h},\nabla_{h}\cdot\vec{v}_{h})_{\tau_{h}}+\left\langle \hat{u}_{h},\vec{v}_{h}\cdot\vec{n}_{h}\right\rangle _{\partial\tau_{h}} & =0\quad\forall\vec{v}_{h}\in\vec{V}_{h},\\
+#(w_{h},\nabla_{h}\cdot\vec{\sigma}_{h})_{\tau_{h}}+\left\langle (\hat{\sigma}_{h}-\vec{\sigma}_{h})\cdot\vec{n},w_{h}\right\rangle _{\partial\tau_{h}} & =(f,w_{h})_{\tau_{h}}\quad\forall w_{h}\in W_{h},\\
+#\left\langle \vec{\sigma}_{h},\xi_{h}\right\rangle _{\partial\tau_{h}\backslash\Gamma} & =0\quad\forall\xi_{h}\in M_{h}^{o},\\
+#\left\langle \hat{u}_{h},\xi_{h}\right\rangle _{\Gamma} & =\left\langle g,\xi_{h}\right\rangle _{\Gamma}\quad\forall\xi_{h}\in M_{h}^{\partial},\\
+#\hat{\sigma}_{h}\cdot\vec{n} & =\vec{\sigma}_{h}\cdot\vec{n}+\tau(u_{h}-\hat{u}_{h}).
+# ```
+#-
 
 using HDiscontinuousGalerkin
 using Tensors
 using BlockArrays
 
 # Load mesh
-root_file = "mesh/figure2.1"
-mesh = parse_mesh_triangle(root_file)
+#To load mesh from triangle
+#root_file = "mesh/figure.1"
+#@time mesh = parse_mesh_triangle(root_file)
 
-# ### Trial and test functions
+#or use internal mesh
+@time mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+
+# ### Initiate function Spaces
 dim = 2
+@time Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
-# Variables
-û_h = TrialFunction(Mh, mesh)
+# Declare variables
+@time û_h = TrialFunction(Mh, mesh)
 σ_h = TrialFunction(Vh, mesh)
 u_h = TrialFunction(Wh, mesh)
 
-# Basic Test
-@test getnlocaldofs(Vh) == 6
-@test getnlocaldofs(Wh) == 3
-@test getnlocaldofs(Mh) == 6
-@test sum(Vh.ssp.detJ) ≈ 2.0
-for i in 1:4
-    @test getdetJdV(Wh,i,1)/Wh.qr_weights[1] ≈ 0.5
-end
-@test Wh.Jinv[1,1] ≈ Tensor{2,2}([1.0 1.0;-2.0 0.0])
-@test Wh.Jinv[2,1] ≈ Tensor{2,2}([-1.0 -1.0;2.0 0.0])
-@test Wh.Jinv[3,1] ≈ Tensor{2,2}([1.0 1.0;-1.0 1.0])
-@test Wh.Jinv[4,1] ≈ Tensor{2,2}([1.0 -1.0;0.0 2.0])
-
-const sq2 = sqrt(2)
-const sq3 = sqrt(3)
-@test Wh.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
-@test Wh.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
-@test Wh.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.normals[1,:,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
-
 # ### Boundary conditions
-dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
+@time dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
-ff = interpolate(f, Wh, mesh)
-@test errornorm(ff,f,mesh) <= eps(Float64)
-
-Be_ex=Vector{Matrix{Float64}}(4)
-Be_ex[1] = [0 0 0; 0 0 0; -3*sq2 0 0; 0.0 0 0; sqrt(6) 0 0; 0 0 0]
-Be_ex[2] = [0 0 0; 0 0 0; 3*sq2 0 0; 0.0 0 0; -sqrt(6) 0 0; 0 0 0]
-Be_ex[3] = [0 0 0; sqrt(6)/2 0 0; -3/2*sq2 0 0; 0 0 0; 3/2*sqrt(6) 0 0; 3/2*sq2 0 0]
-Be_ex[4] = [0 0 0; sqrt(6) 0 0; 0 0 0; 0.0 0 0; 0 0 0; 3*sq2 0 0]
-Ce_ex=Vector{Matrix{Float64}}(4)
-Ce_ex[1] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
-Ce_ex[2] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
-Ce_ex[3] = [2*sq2+2 sqrt(6)-sqrt(3) sq2-1; sqrt(6)-sqrt(3)  4*sq2+4 0; sq2-1 0 4*sq2+4]
-Ce_ex[4] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
-Ee_ex=Vector{Matrix{Float64}}(4)
-Ee_ex[1] = -[sq2/2 0 sq2/2 0 -sq2 0; sq3/2 -1/2 -sq3/2 1/2 0 -2; 1/2 sq3/2 1/2 sq3/2 2 0;
-           -sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2  1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0]
-Ee_ex[2] = -[-sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2 -1/2 0 -2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0;
-          sq2/2 0 -sq2/2 0 0 0; sq3/2 -1/2 sq3/2  -1/2 0 0; 1/2 sq3/2 -1/2 -sq3/2 0 0]
-Ee_ex[3] = -[0 0 sq2/2 0 -sq2/2 0; 0 0 -sq3/2  -1/2 0 1; 0 0 1/2 -sq3/2 1 0;
-            -sq2 0 sq2/2 0 sq2/2 0; -sq3 1 -sq3/2 -1/2 0 -1; -1 -sq3 1/2 -sq3/2 -1 0]
-Ee_ex[4] = -[-sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2 1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0;
-           -sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2  -1/2 0 2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0]
-He_ex=Vector{Matrix{Float64}}(4)
-He_ex[1] = [sq2/2 0 0 0 0 0 ;0 sq2/2 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1]
-He_ex[3] = [1 0 0 0 0 0 ;0 1 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 sq2/2 0; 0 0 0 0 0 sq2/2]
-He_ex[2] = He_ex[1]
-He_ex[4] = He_ex[1]
-
-function doassemble(Vh, Wh, Mh, τ = 1)
+# ### Assembling the linear system
+# Now we have all the pieces needed to assemble the linear system, $K û = f$.
+function doassemble(Vh, Wh, Mh, τ = 1.0)
     # Allocate Matrices
     n_basefuncs = getnbasefunctions(Vh)
-    @test n_basefuncs == 6
     n_basefuncs_s = getnbasefunctions(Wh)
-    @test n_basefuncs_s == 3
     n_basefuncs_t = getnbasefunctions(Mh)
-    @test n_basefuncs_t == 2
     Ae = zeros(n_basefuncs, n_basefuncs)
     Be = zeros(n_basefuncs, n_basefuncs_s)
     Ce = zeros(n_basefuncs_s, n_basefuncs_s)
@@ -96,7 +69,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
-    fill!(rhs,0)
+    fill!(rhs,0.0)
+    ff = interpolate(f, Wh, mesh)
+
+    # Preallocate vectors to store data for u and σ recovery
     K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
     b_element = Array{AbstractVector{Float64}}(getncells(mesh))
 
@@ -126,8 +102,6 @@ function doassemble(Vh, Wh, Mh, τ = 1)
                 end
             end
         end
-        @test Ae ≈ 0.5*one(Ae)
-        @test Be ≈ Be_ex[cell_idx]
         #RHS
         for q_point in 1:getnquadpoints(Wh)
             dΩ = getdetJdV(Wh, cell_idx, q_point)
@@ -177,9 +151,6 @@ function doassemble(Vh, Wh, Mh, τ = 1)
                 end
             end
         end
-        @test Ce ≈ Ce_ex[cell_idx]
-        @test Ee ≈ Ee_ex[cell_idx]
-        @test He ≈ He_ex[cell_idx]
         #Assamble Ke
         Me = BlockArray{Float64}(undef, [n_basefuncs,n_basefuncs_s], [n_basefuncs,n_basefuncs_s])
         setblock!(Me, Ae, 1, 1)
@@ -214,15 +185,6 @@ function doassemble(Vh, Wh, Mh, τ = 1)
     return end_assemble(assembler), rhs, K_element, b_element
 end
 
-### Solution of the system
-K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
-
-# To account for the boundary conditions we use the `apply!` function.
-# This modifies elements in `K` and `f` respectively, such that
-# we can get the correct solution vector `u` by using `\`.
-apply!(K,b,dbc)
-û = K \ b;
-#Now we recover original variables from skeleton û
 function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
     n_cells = getncells(mesh)
     n_basefuncs = getnbasefunctions(σ_h)
@@ -239,9 +201,56 @@ function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
         u_h.m_values[cell_idx,:] = dof[n_basefuncs+1:end]
     end
 end
+#md nothing # hide
 
-get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
+### Solution of the system
+@time K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
+
+# To account for the boundary conditions we use the `apply!` function.
+# This modifies elements in `K` and `f` respectively, such that
+# we can get the correct solution vector `u` by using `\`.
+@time apply!(K,b,dbc)
+#using IterativeSolvers
+#û = gmres(K,b)
+û = K \ b;
+
+#Now we recover original variables from skeleton û
+@time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex, mesh)
-@test Etu_h <= 0.12
+Etu_h <= 0.00006
+
+#Plot mesh
+using PyCall
+using PyPlot
+@pyimport matplotlib.tri as mtri
+m_nodes = get_vertices_matrix(mesh)
+triangles = get_cells_matrix(mesh)
+triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+PyPlot.triplot(triang, "ko-")
+
+#Plot avg(u_h)
+# We need avg since u_h is discontinuous
+nodalu_h = Vector{Float64}(length(mesh.nodes))
+share_count = zeros(Int,length(mesh.nodes))
+fill!(nodalu_h,0)
+for (k,cell) in enumerate(mesh.cells)
+    for node in cell.nodes
+        u = value(u_h, k, mesh.nodes[node].x)
+        nodalu_h[node] += u
+        share_count[node] += 1
+    end
+end
+nodalu_h = nodalu_h./share_count
+PyPlot.tricontourf(triang, nodalu_h)
+
+
+
+
+# ### Exporting to VTK
+# To visualize the result we export the grid and our field `u`
+# to a VTK-file, which can be viewed in e.g. [ParaView](https://www.paraview.org/).
+# vtk_grid("heat_equation", dh) do vtk
+#     vtk_point_data(vtk, dh, u)
+# end

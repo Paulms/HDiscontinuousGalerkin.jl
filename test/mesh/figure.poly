@@ -19,5 +19,5 @@
  # Optional line: <# of regional attributes and/or area constraints>
            1
  # Optional following lines: <region #> <x> <y> <attribute> <maximum area>
-           1  0.19499998819082975       0.19499998819082975                1   0.2
- # triangle -anveD figura.poly                     
+           1  0.19499998819082975       0.19499998819082975                1   0.025
+ # triangle -anveD figure.poly         

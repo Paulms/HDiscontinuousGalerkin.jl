@@ -10,18 +10,20 @@ for j = 1:15
 end
 
 # Test nodal points for Lagrange base
-@test get_nodal_points(RefTetrahedron(), Val{2}, 1) == [Vec{2, Float64}((0.0, 0.0)),
-                                            Vec{2, Float64}((1.0, 0.0)),
-                                            Vec{2, Float64}((0.0, 1.0))]
-
-@test get_nodal_points(RefTetrahedron(), Val{2}, 2) == [Vec{2, Float64}((0.0, 0.0)),
-                                            Vec{2, Float64}((1.0, 0.0)),
-                                            Vec{2, Float64}((0.0, 1.0)),
-                                            Vec{2, Float64}((0.5, 0.0)),
-                                            Vec{2, Float64}((0.5, 0.5)),
-                                            Vec{2, Float64}((0.0, 0.5))]
-@test length(get_nodal_points(RefTetrahedron(), Val{2}, 3)) == 10
-@test get_nodal_points(RefTetrahedron(), Val{2}, 3)[10] ≈ Vec{2, Float64}((1/3, 1/3))
+nodal_points, topology = get_nodal_points(RefTetrahedron, Val{2}, 1)
+@test  nodal_points == [Vec{2, Float64}((0.0, 0.0)),
+                        Vec{2, Float64}((1.0, 0.0)),
+                        Vec{2, Float64}((0.0, 1.0))]
+nodal_points, topology = get_nodal_points(RefTetrahedron, Val{2}, 2)
+@test nodal_points == [Vec{2, Float64}((0.0, 0.0)),
+                        Vec{2, Float64}((1.0, 0.0)),
+                        Vec{2, Float64}((0.0, 1.0)),
+                        Vec{2, Float64}((0.5, 0.5)),
+                        Vec{2, Float64}((0.0, 0.5)),
+                        Vec{2, Float64}((0.5, 0.0))]
+nodal_points, topology = get_nodal_points(RefTetrahedron, Val{2}, 3)
+@test length(nodal_points) == 10
+@test nodal_points[10] ≈ Vec{2, Float64}((1/3, 1/3))
 # Test Lagrange base
 function ref_value(i::Int, ξ::Vec{2})
     ξ_x = ξ[1]
@@ -41,8 +43,8 @@ end
 
 function ref_value1(i::Int, ξ::Vec{1})
     ξ_x = ξ[1]
-    i == 1 && return 0.5*(1-ξ_x)
-    i == 2 && return 0.5*(1+ξ_x)
+    i == 1 && return 1-ξ_x
+    i == 2 && return ξ_x
     throw(ArgumentError("no shape function $i for interpolation $ip"))
 end
 ξ_ref = Vec{1}((0.5,))
@@ -56,13 +58,13 @@ end
 function ref_value(i::Int, x::Real)
     @assert i <= 3
     if i == 0
-        return sqrt(2)/2
+        return 1.0
     elseif i == 1
-        return sqrt(3/2)*x
+        return sqrt(3)*(2*x - 1)
     elseif i == 2
-        return sqrt(5/8)*(3*x^2 - 1)
+        return sqrt(5)*(6*x^2 - 6*x + 1)
     else
-        return sqrt(7/8)*(5*x^3-3*x)
+        return sqrt(7)*(2*x - 1)*(10*x^2 - 10*x + 1)
     end
 end
 function ref_dvalue(i::Int, x::Real)
@@ -70,11 +72,11 @@ function ref_dvalue(i::Int, x::Real)
     if i == 0
         return 0
     elseif i == 1
-        return sqrt(3/2)
+        return sqrt(3)*2
     elseif i == 2
-        return 3*sqrt(5/2)*x
+        return sqrt(5)*(12*x - 6)
     else
-        return sqrt(7/8)*(15*x^2 - 3)
+        return sqrt(7)*12*(5*x^2 - 5*x + 1)
     end
 end
 

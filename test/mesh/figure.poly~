@@ -1,0 +1,23 @@
+ # First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
+          4           2           0           1
+ # Following lines: <vertex #> <x> <y> [attributes] [boundary marker]
+           1		0       0	1
+           2   		1	0	1
+           3		1	1	1
+           4		0	1       1
+ # One line: <# of segments> <# of boundary markers (0 or 1)>
+          4           1
+ # Following lines: <segment #> <endpoint> <endpoint> [boundary marker]
+           1           1           2           1
+           2           2           3           1
+           3           3           4           1
+           4           4           1           1
+ # One line: <# of holes>
+           0
+ # Following lines: <hole #> <x> <y>
+ #          1  0.50000000000000000       0.50000000000000000     
+ # Optional line: <# of regional attributes and/or area constraints>
+           1
+ # Optional following lines: <region #> <x> <y> <attribute> <maximum area>
+           1  0.19499998819082975       0.19499998819082975                1   0.0025
+ # triangle -anveD figure.poly         
