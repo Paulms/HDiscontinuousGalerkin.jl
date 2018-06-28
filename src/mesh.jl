@@ -87,6 +87,15 @@ Return a vector with the coordinates of the vertices of cell number `cell`.
     end
     return coords
 end
+
+@inline function get_coordinates!(coords, cell::Cell, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
+    @assert length(coords) == N
+    for (i,j) in enumerate(cell.nodes)
+        coords[i] = mesh.nodes[j].x
+    end
+    return coords
+end
+
 @inline function get_cell_coordinates(cell_idx::Int, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     coords = Vector{Vec{dim,T}}(N)
     for (i,j) in enumerate(mesh.cells[cell_idx].nodes)

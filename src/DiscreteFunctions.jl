@@ -30,8 +30,9 @@ function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}) where {dim,T}
     n_cells = getncells(mesh)
     n_qpoints = getnquadpoints(fs)
     N = fill(zero(T)          * T(NaN), n_cells, n_qpoints)
+    coords = fill(zero(Vec{dim,T}) * T(NaN), n_nodes_per_cell(mesh))
     for (k,cell) in enumerate(get_cells(mesh))
-        coords = get_coordinates(cell, mesh)
+        coords = get_coordinates!(coords,cell, mesh)
         for i in 1:n_qpoints
             N[k,i] = f(spatial_coordinate(fs, i, coords))
         end
