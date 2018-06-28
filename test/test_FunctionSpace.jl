@@ -18,9 +18,9 @@ Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
 # Variables
-û_h = TrialFunction(Mh, mesh)
-σ_h = TrialFunction(Vh, mesh)
-u_h = TrialFunction(Wh, mesh)
+û_h = TrialFunction(Mh)
+σ_h = TrialFunction(Vh)
+u_h = TrialFunction(Wh)
 
 # Basic Test
 @test getnlocaldofs(Vh) == 6
@@ -49,8 +49,8 @@ dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
-ff = interpolate(f, Wh, mesh)
-@test errornorm(ff,f,mesh) <= eps(Float64)
+ff = interpolate(f, Wh)
+@test errornorm(ff,f) <= eps(Float64)
 
 Be_ex=Vector{Matrix{Float64}}(4)
 Be_ex[1] = [0 0 0; 0 0 0; -3*sq2 0 0; 0.0 0 0; sqrt(6) 0 0; 0 0 0]
@@ -243,5 +243,5 @@ end
 get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-Etu_h = errornorm(u_h, u_ex, mesh)
+Etu_h = errornorm(u_h, u_ex)
 @test Etu_h <= 0.12

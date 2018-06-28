@@ -25,7 +25,8 @@ end
 function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
 Interpolation of scalar functions f(x): x ∈ ℝⁿ ↦ ℝ on Scalar Function Space `fs`
 """
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}) where {dim,T}
+    mesh = getmesh(fs)
     n_cells = getncells(mesh)
     n_qpoints = getnquadpoints(fs)
     N = fill(zero(T)          * T(NaN), n_cells, n_qpoints)
@@ -42,7 +43,6 @@ end
 struct TrialFunction{dim,T,refshape,N}
     fs::DiscreteFunctionSpace{dim,T,refshape}
     m_values::Array{T,N}
-    mesh::PolygonalMesh{dim}
     components::Int
 end
 
@@ -52,25 +52,29 @@ end
 @inline getrefshape(u::TrialFunction{dim,T,refshape}) where {dim,T,refshape} = refshape
 @inline getncomponents(u::TrialFunction) = u.components
 
-function TrialFunction(fs::ScalarTraceFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+function TrialFunction(fs::ScalarTraceFunctionSpace{dim,T}) where {dim,T}
+    mesh = getmesh(fs)
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs), n_faces_per_cell(mesh))
-    return TrialFunction(fs, m_values, mesh, 1)
+    return TrialFunction(fs, m_values, 1)
 end
 
-function TrialFunction(fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+function TrialFunction(fs::ScalarFunctionSpace{dim,T}) where {dim,T}
+    mesh = getmesh(fs)
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
-    return TrialFunction(fs, m_values, mesh, 1)
+    return TrialFunction(fs, m_values, 1)
 end
 
-function TrialFunction(fs::VectorFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
+function TrialFunction(fs::VectorFunctionSpace{dim,T}) where {dim,T}
+    mesh = getmesh(fs)
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
-    return TrialFunction(fs, m_values, mesh, dim)
+    return TrialFunction(fs, m_values, dim)
 end
 
-function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values::Array{T,N}, mesh::PolygonalMesh) where {dim,T,N}
+function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values::Array{T,N}) where {dim,T,N}
+    mesh = getmesh(fs)
     @assert size(m_values,1) == getncells(mesh)
     @assert size(m_values,2) == getnbasefunctions(fs)
-    return TrialFunction(fs, m_values, mesh, components)
+    return TrialFunction(fs, m_values, components)
 end
 
 """
@@ -95,14 +99,16 @@ function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T})
 """
 function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T}) where {dim,T}
     u = zero(T)
-    ξ = reference_coordinate(u_h.fs, cell, u_h.mesh.nodes[mesh.cells[cell].nodes[1]].x, x)
+    mesh = getmesh(u_h.fs)
+    ξ = reference_coordinate(u_h.fs, cell, mesh.nodes[mesh.cells[cell].nodes[1]].x, x)
     for i in 1:getnbasefunctions(u_h.fs)
         u  += u_h.m_values[cell, i]*value(get_interpolation(u_h.fs), i, ξ)
     end
     return u
 end
 
-function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, mesh, norm_type::String="L2") where {dim,T}
+function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, norm_type::String="L2") where {dim,T}
+    mesh = getmesh(u_h.fs)
     Etu_h = zero(T)
     if norm_type == "L2"
         n_basefuncs_s = getnbasefunctions(u_h)
@@ -123,7 +129,8 @@ function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, mesh, norm_type::S
     return Etu_h
 end
 
-function errornorm(u_h::InterpolatedFunction{dim,T}, u_ex::Function, mesh, norm_type::String="L2") where {dim,T}
+function errornorm(u_h::InterpolatedFunction{dim,T}, u_ex::Function, norm_type::String="L2") where {dim,T}
+    mesh = getmesh(u_h.fs)
     Etu_h = zero(T)
     if norm_type == "L2"
         n_basefuncs_s = getnbasefunctions(u_h.fs)

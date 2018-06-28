@@ -7,7 +7,7 @@ dim = 2
 Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
 
 # Declare variables
-u_h = TrialFunction(Wh, mesh)
+u_h = TrialFunction(Wh)
 
 # ### Degrees of freedom
 dh = DofHandler([u_h],mesh)
@@ -36,7 +36,7 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     # create an assembler. The assembler
     # is just a thin wrapper around `f` and `K` and some extra storage
     # to make the assembling faster.
-    ff = interpolate(f, Wh, mesh)
+    ff = interpolate(f, Wh)
 
     # It is now time to loop over all the cells in our grid.
     @inbounds for cell_idx in 1:getncells(mesh)
@@ -82,5 +82,5 @@ reconstruct!(u_h, u, dh)
 
 # ### Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-Etu_h = errornorm(u_h, u_ex, mesh)
+Etu_h = errornorm(u_h, u_ex)
 @test Etu_h <= 0.0002

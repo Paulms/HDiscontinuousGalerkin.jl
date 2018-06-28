@@ -33,18 +33,18 @@ using BlockArrays
 #@time mesh = parse_mesh_triangle(root_file)
 
 #or use internal mesh
-@time mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
 dim = 2
-@time Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
 Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
 
 # Declare variables
-@time û_h = TrialFunction(Mh, mesh)
-σ_h = TrialFunction(Vh, mesh)
-u_h = TrialFunction(Wh, mesh)
+@time û_h = TrialFunction(Mh)
+σ_h = TrialFunction(Vh)
+u_h = TrialFunction(Wh)
 
 # ### Boundary conditions
 @time dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
@@ -70,7 +70,7 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0.0)
-    ff = interpolate(f, Wh, mesh)
+    ff = interpolate(f, Wh)
 
     # Preallocate vectors to store data for u and σ recovery
     K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
@@ -218,7 +218,7 @@ end
 @time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-Etu_h = errornorm(u_h, u_ex, mesh)
+Etu_h = errornorm(u_h, u_ex)
 Etu_h <= 0.00006
 
 #Plot mesh
