@@ -60,7 +60,7 @@ fill!(K.nzval, 1.0)
 spy(K; height = 15)
 
 # ### Boundary conditions
-dbc = Dirichlet(u_h, dh, "boundary", x -> 0)
+dbc = Dirichlet(u_h, dh, "boundary", [0.0])
 
 # ### RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -130,35 +130,35 @@ K, b = doassemble(Wh, K, dh);
 apply!(K,b,dbc)
 u = K \ b;
 
-reconstruct!(u_h, u, dh)
+# reconstruct!(u_h, u, dh)
+# #
+# # # ### Compute errors
+# u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
+# Etu_h = errornorm(u_h, u_ex)
+# Etu_h <= 0.0002
 #
-# # ### Compute errors
-u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-Etu_h = errornorm(u_h, u_ex)
-Etu_h <= 0.0002
-
-# ### Plot Solution
-#Plot mesh
-using PyCall
-using PyPlot
-@pyimport matplotlib.tri as mtri
-m_nodes = get_vertices_matrix(mesh)
-triangles = get_cells_matrix(mesh)
-triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
-PyPlot.triplot(triang, "ko-")
-
-nodalu_h = Vector{Float64}(length(mesh.nodes))
-share_count = zeros(Int,length(mesh.nodes))
-fill!(nodalu_h,0)
-for (k,cell) in enumerate(mesh.cells)
-    for node in cell.nodes
-        u = value(u_h, k, mesh.nodes[node].x)
-        nodalu_h[node] += u
-        share_count[node] += 1
-    end
-end
-nodalu_h = nodalu_h./share_count
-u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
-nodalu_h
-nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
-PyPlot.tricontourf(triang, nuh)
+# # ### Plot Solution
+# #Plot mesh
+# using PyCall
+# using PyPlot
+# @pyimport matplotlib.tri as mtri
+# m_nodes = get_vertices_matrix(mesh)
+# triangles = get_cells_matrix(mesh)
+# triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+# PyPlot.triplot(triang, "ko-")
+#
+# nodalu_h = Vector{Float64}(length(mesh.nodes))
+# share_count = zeros(Int,length(mesh.nodes))
+# fill!(nodalu_h,0)
+# for (k,cell) in enumerate(mesh.cells)
+#     for node in cell.nodes
+#         u = value(u_h, k, mesh.nodes[node].x)
+#         nodalu_h[node] += u
+#         share_count[node] += 1
+#     end
+# end
+# nodalu_h = nodalu_h./share_count
+# u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
+# nodalu_h
+# nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
+# PyPlot.tricontourf(triang, nuh)
