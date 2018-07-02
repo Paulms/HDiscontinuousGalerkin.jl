@@ -72,8 +72,8 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                         token = ht_keyindex2!(facesdict, element)
                         if token > 0
                             el_faces[i] = facesdict.vals[token]
-                            if !(n_el in faces[facesdict.vals[token]].cells)
-                                push!(faces[facesdict.vals[token]].cells,n_el)
+                            if !(n_el == faces[facesdict.vals[token]].cell1[])
+                                faces[facesdict.vals[token]].cell2[] = n_el
                             end
                         else
                             ref = -1
@@ -81,7 +81,7 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                             if token2 > 0
                                 ref = faces_ref.vals[token2]
                             end
-                            face = Face([n_el],(v1,v2))
+                            face = Face(ScalarWrapper(n_el),ScalarWrapper(0),(v1,v2))
                             push!(faces, face)
                             n_faces = n_faces + 1
                             el_faces[i] = n_faces

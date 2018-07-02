@@ -64,3 +64,17 @@ function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interp
     end
     return face_quad_rule
 end
+
+#OTher Functions
+"""
+function integrate(f::function,qr::QuadratureRule)
+integrate function f on reference shape of quadrature qr
+"""
+function integrate(f::Function,qr::QuadratureRule)
+    p = getpoints(qr); w = getweights(qr)
+    int_val = zero(typeof(f(p[1])))
+    for (i,x) in enumerate(p)
+        int_val += f(x)*w[i]
+    end
+    int_val
+end

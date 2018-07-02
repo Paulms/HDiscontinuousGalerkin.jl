@@ -12,13 +12,13 @@ abstract type AbstractQuadratureRule end
 abstract type Interpolation{dim,shape,order} end
 abstract type DiscreteFunctionSpace{dim,T,refshape} end
 
+include("utils.jl")
 include("shapes.jl")
 include("mesh.jl")
 include("generate_mesh.jl")
 include("triangle_mesh.jl")
 include("basis.jl")
 include("quadrature.jl")
-include("utils.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
 include("FunctionSpace.jl")
@@ -53,7 +53,7 @@ export get_num_vertices
 export QuadratureRule
 export RefTetrahedron
 export DefaultQuad, GrundmannMoeller, Strang, GaussLegendre
-export getpoints, getweights
+export getpoints, getweights, integrate
 
 # basis
 export Dubiner, Lagrange, jacobi, Legendre
@@ -65,7 +65,7 @@ export getorder, getlowerdiminterpol
 export get_topology, get_interpolation
 
 #utils
-export get_affine_map, integrate, zcheck!, zcheck
+export get_affine_map
 
 #Assembler
 export start_assemble, assemble!, end_assemble

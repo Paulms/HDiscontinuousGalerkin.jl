@@ -34,12 +34,12 @@ function topology_elements(cell::Cell{2},element::Int)
 end
 
 struct Edge #For 3D meshes
-     cells::Vector{Int}
      nodes::NTuple{2,Int}
 end
 
 struct Face{K}
-    cells::Vector{Int}
+    cell1::ScalarWrapper{Int}
+    cell2::ScalarWrapper{Int}
     nodes::NTuple{K,Int}
 end
 
@@ -131,7 +131,7 @@ end
 @inline nodes(ele::Cell, mesh::PolygonalMesh) = [mesh.nodes[node] for node in ele.nodes]
 @inline nodes(face::Face, mesh::PolygonalMesh) = [mesh.nodes[node] for node in face.nodes]
 @inline faces(ele::Cell, mesh::PolygonalMesh) = [mesh.faces[face] for face in ele.faces]
-@inline cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in face.cells]
+@inline cells(face::Face, mesh::PolygonalMesh) = [mesh.cells[ele] for ele in (face.cell1[], face.cell2[])]
 
 function cell_diameter(mesh::PolygonalMesh{dim,N,M,NN,T}, idx::Int) where {dim,N,M,NN,T}
     K = get_cells(mesh)[idx]

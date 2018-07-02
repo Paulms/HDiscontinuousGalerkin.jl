@@ -36,16 +36,16 @@ function _build_cells(cells::Vector{TriangleCell}, el_nodes, el_faces,n_el, face
     #build faces
     for (i,fn_id) in enumerate(reference_edge_nodes(RefTetrahedron, Val{2}))
         v1 = el_nodes[fn_id[1]]; v2 = el_nodes[fn_id[2]]
-        element = (min(v1,v2),max(v1,v2))
+        element = minmax(v1,v2)
         token = ht_keyindex2!(facesdict, element)
         if token > 0
                 el_faces[i] = facesdict.vals[token]
-                if !(n_el in faces[facesdict.vals[token]].cells)
-                    push!(faces[facesdict.vals[token]].cells,n_el)
+                if !(n_el == faces[facesdict.vals[token]].cell1[])
+                    faces[facesdict.vals[token]].cell2[] = n_el
                 end
         else
             Base._setindex!(facesdict, length(faces)+1, element, -token)
-            face = Face([n_el],(v1,v2))
+            face = Face(ScalarWrapper(n_el),ScalarWrapper(0),(v1,v2))
             push!(faces, face)
             el_faces[i] = length(faces)
         end
@@ -106,7 +106,7 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     leftSet = Set{Int}()
     for k in 1:length(faces)
         ref = 0
-        if length(faces[k].cells) == 1
+        if faces[k].cell2[] == 0
             if (nodes[faces[k].nodes[1]].x[2] == LL[2] && nodes[faces[k].nodes[2]].x[2] == LL[2])
                 push!(bottomSet, k)
             elseif (nodes[faces[k].nodes[1]].x[1] == UR[1] && nodes[faces[k].nodes[2]].x[1] == UR[1])
