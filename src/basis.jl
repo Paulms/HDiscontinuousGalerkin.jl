@@ -169,7 +169,7 @@ function dubiner(x,y,n::Integer,m::Integer)
     #check domain
     @assert ((y>=0)&&(x>=0))&&(1>=x+y) "point not in domain"
     # Map to reference square
-    ξ=2*x/(1-y)-1
+    ξ=abs(x) < eps() ? -one(typeof(x)) : 2*x/(1-y)-1
     η=2*y-1
     k=2*n+1
     #Compute Dubiner_nm(ξ, η)
@@ -188,7 +188,7 @@ function ∇dubiner(x,y,n::Integer,m::Integer)
     #check domain
     @assert ((y>=0)&&(x>=0))&&(1>=x+y) "point not in domain"
     # Map to reference square
-    ξ=2*x/(1-y)-1
+    ξ=abs(x) < eps() ? -one(typeof(x)) : 2*x/(1-y)-1
     k=2*n+1
     η=2*y-1
     #Compute ∇Dubiner_nm(ξ, η)
