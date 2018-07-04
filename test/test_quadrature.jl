@@ -17,7 +17,7 @@ for i in 0:5
 end
 
 # Test Strang Quadrature
-for i in 1:5
+for i in 1:6
     quad_rule = QuadratureRule{2,RefTetrahedron}(Strang(),i)
     @test sum(getweights(quad_rule)) ≈ 0.5
 end

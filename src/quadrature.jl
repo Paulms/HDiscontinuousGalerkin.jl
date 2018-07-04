@@ -15,9 +15,9 @@ struct GaussLegendre <: AbstractQuadratureRule end
 
 # utils
 function (::Type{QuadratureRule{2,RefTetrahedron}})(quad_type::DefaultQuad, order::Int)
-    if order <= 5
+    if order <= 6
         return QuadratureRule{2,RefTetrahedron}(Strang(),order)
-    elseif order > 5 && isodd(order)
+    elseif order > 6 && isodd(order)
         s = Int((order-1)/2)
         return QuadratureRule{2,RefTetrahedron}(GrundmannMoeller(),s)
     else
