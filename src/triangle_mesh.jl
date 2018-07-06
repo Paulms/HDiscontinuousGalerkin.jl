@@ -72,8 +72,8 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                         token = ht_keyindex2!(facesdict, element)
                         if token > 0
                             el_faces[i] = facesdict.vals[token]
-                            if !(n_el == faces[facesdict.vals[token]].cell1[])
-                                faces[facesdict.vals[token]].cell2[] = n_el
+                            if !(n_el == faces[facesdict.vals[token],4])
+                                faces[facesdict.vals[token],4] = n_el
                             end
                         else
                             ref = -1
@@ -81,10 +81,12 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                             if token2 > 0
                                 ref = faces_ref.vals[token2]
                             end
-                            face = Face(ScalarWrapper(n_el),ScalarWrapper(0),(v1,v2))
-                            push!(faces, face)
                             n_faces = n_faces + 1
                             el_faces[i] = n_faces
+                            faces[n_faces,1] = v1
+                            faces[n_faces,2] = v2
+                            faces[n_faces,3] = n_el
+                            faces[n_faces,4] = 0
                             Base._setindex!(facesdict, n_faces, element, -token)
                             if ref > 0
                                 push!(boundary_faces, n_faces)
@@ -109,11 +111,11 @@ Ex: `parse_mesh_triangle("figure.1")`
 function parse_mesh_triangle(root_file)
     nodes = Vector{Node}()
     faces_ref = Dict{NTuple{2,Int},Int}()
-    faces = Vector{Face{2}}()
     cells = Vector{TriangleCell}()
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_ref, root_file)
+    faces = Matrix{Int}(length(faces_ref),4)
     parse_cells!(cells, faces, faces_ref,facesets,nodes, root_file)
     PolygonalMesh{2,3,3,2,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end

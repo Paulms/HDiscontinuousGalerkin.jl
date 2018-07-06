@@ -16,11 +16,11 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
     prescribed_dofs = Vector{Int}(n_faces*n_dof)
     values = Vector{T}(n_faces*n_dof)
     k = 0
-    for (face_idx, face) in enumerate(get_faces(mesh))
+    for face_idx in 1:getnfaces(mesh)
         let face_idx::Int = face_idx
         if face_idx ∈ faceset
-            @assert face.cell2[] == 0 "Face $face_idx is not in boundary"
-            cell_idx = face.cell1[]
+            @assert getcell(2,face_idx,mesh) == 0 "Face $face_idx is not in boundary"
+            cell_idx = getcell(1,face_idx,mesh)
             cell = mesh.cells[cell_idx]
             face_lidx = find(x -> x == face_idx,cell.faces)[1]
             orientation = face_orientation(mesh, cell_idx, face_lidx)
@@ -65,12 +65,11 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
     prescribed_dofs = Vector{Int}()
     values = Vector{T}()
     M = _get_nodal_transformation_matrix(interp)
-    for (face_idx, face) in enumerate(get_faces(dh.mesh))
-        let face_idx =face_idx
+    for face_idx in 1:getnfaces(dh.mesh)
         if face_idx ∈ faceset
-            @assert face.cell2[] == 0 "Face $face_idx is not in boundary"
-            cell = dh.mesh.cells[face.cell1[]]
-            cell_idx = face.cell1[]
+            @assert getcell(2,face_idx,dh.mesh) == 0 "Face $face_idx is not in boundary"
+            cell_idx = getcell(1,face_idx,dh.mesh)
+            cell = dh.mesh.cells[cell_idx]
             face_lidx::Int = find(x -> x == face_idx,cell.faces)[1]
             l_dof = Int[]
             offset::Int = dh.cell_dofs_offset[cell_idx] - 1 + field_offset(dh, field)
@@ -89,7 +88,6 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
                 end
             end
             _push_values!(values, cell, dh.mesh, l_dof, fs, interp, M, field, f)
-        end
         end
     end
     #now put all in order

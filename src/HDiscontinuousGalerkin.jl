@@ -32,7 +32,7 @@ include("boundary.jl")
 # mesh
 export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
-export Cell, Node, Face, PolygonalMesh
+export Cell, Node, PolygonalMesh
 export getncells, getnfaces, n_faces_per_cell, get_normal
 export face_orientation, get_faceset
 export rectangle_mesh
