@@ -40,7 +40,7 @@ function _build_cells(face_idx, cells::Vector{TriangleCell}, el_nodes, el_faces,
         token = ht_keyindex2!(facesdict, element)
         if token > 0
                 el_faces[i] = facesdict.vals[token]
-                if !(n_el == faces[facesdict.vals[token],4])
+                if n_el != faces[facesdict.vals[token],4]
                     faces[facesdict.vals[token],4] = n_el
                 end
         else
@@ -54,7 +54,7 @@ function _build_cells(face_idx, cells::Vector{TriangleCell}, el_nodes, el_faces,
         end
     end
     #save cell
-    cell = TriangleCell(el_nodes, (el_faces...))
+    cell = TriangleCell(el_nodes, (el_faces[1],el_faces[2],el_faces[3]))
     push!(cells, cell)
     return face_idx
 end

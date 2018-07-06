@@ -94,7 +94,7 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                         end
                     end
                     #save cell
-                    cell = Cell{2,3,3}(el_nodes, (el_faces...))
+                    cell = Cell{2,3,3}(el_nodes, (el_faces[1],el_faces[2],el_faces[3]))
                     push!(cells, cell)
                 end
             end
