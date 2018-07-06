@@ -66,6 +66,7 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
     values = Vector{T}()
     M = _get_nodal_transformation_matrix(interp)
     for face_idx in 1:getnfaces(dh.mesh)
+        let face_idx::Int = face_idx
         if face_idx ∈ faceset
             @assert getcell(2,face_idx,dh.mesh) == 0 "Face $face_idx is not in boundary"
             cell_idx = getcell(1,face_idx,dh.mesh)
@@ -88,6 +89,7 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
                 end
             end
             _push_values!(values, cell, dh.mesh, l_dof, fs, interp, M, field, f)
+        end
         end
     end
     #now put all in order

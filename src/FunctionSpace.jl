@@ -65,22 +65,22 @@ function spatial_coordinate(fs::ScalarFunctionSpace{dim}, face::Int, q_point::In
 end
 
 function ScalarFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
-    quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}
+    quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(shape, Val{dim})) where {dim, shape, order}
     quad_rule = QuadratureRule{dim,shape}(DefaultQuad(), quad_degree)
     face_quad_rule = QuadratureRule{dim-1,shape}(DefaultQuad(), quad_degree)
-    ScalarFunctionSpace(Float64, mesh, order, quad_rule, face_quad_rule, func_interpol, geom_interpol)
+    ScalarFunctionSpace(Float64, mesh, quad_rule, face_quad_rule, func_interpol, geom_interpol)
 end
 
-function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, order, quad_rule::QuadratureRule{dim,shape}, face_quad_rule::QuadratureRule{dim1,shape},
-    func_interpol::Interpolation,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim,dim1, T,shape<:AbstractRefShape,N1,N2,N3}
+function ScalarFunctionSpace(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, quad_rule::QuadratureRule{dim,shape}, f_quad_rule::QuadratureRule{dim1,shape},
+    func_interpol::Interpolation{dim,shape,order},geom_interpol::Interpolation=get_default_geom_interpolator(shape, Val{dim})) where {dim,dim1, T,shape<:AbstractRefShape,N1,N2,N3,order}
 
     @assert getdim(func_interpol) == getdim(geom_interpol)
     @assert getrefshape(func_interpol) == getrefshape(geom_interpol) == shape
     @assert dim1 == dim - 1
-    n_faceqpoints = length(getpoints(face_quad_rule))
-    q_ref_facepoints = getpoints(face_quad_rule)
-    q_ref_faceweights = getweights(face_quad_rule)
-    face_quad_rule = create_face_quad_rule(face_quad_rule, func_interpol)
+    n_faceqpoints = length(getpoints(f_quad_rule))
+    q_ref_facepoints = getpoints(f_quad_rule)
+    q_ref_faceweights = getweights(f_quad_rule)
+    face_quad_rule = create_face_quad_rule(f_quad_rule, func_interpol)
 
     n_qpoints = length(getpoints(quad_rule))
     n_cells = getncells(mesh)
@@ -231,10 +231,10 @@ function shape_divergence(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_fun
 end
 
 function VectorFunctionSpace(mesh::PolygonalMesh, func_interpol::Interpolation{dim,shape,order},
-    quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(dim, shape)) where {dim, shape, order}
+    quad_degree = order+1,geom_interpol::Interpolation=get_default_geom_interpolator(shape, Val{dim})) where {dim, shape, order}
     quad_rule = QuadratureRule{dim,shape}(DefaultQuad(), quad_degree)
     face_quad_rule = QuadratureRule{dim-1,shape}(DefaultQuad(), quad_degree)
-    ssp = ScalarFunctionSpace(Float64, mesh, order, quad_rule, face_quad_rule, func_interpol, geom_interpol)
+    ssp = ScalarFunctionSpace(Float64, mesh, quad_rule, face_quad_rule, func_interpol, geom_interpol)
     n_func_basefuncs = getnbasefunctions(func_interpol)
     dof = n_func_basefuncs*dim
     VectorFunctionSpace(dof,ssp)

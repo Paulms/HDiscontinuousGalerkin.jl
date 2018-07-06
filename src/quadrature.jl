@@ -44,12 +44,13 @@ Face Quadrature Rules
 function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interpolation{2,shape}) where {T,shape}
     w = getweights(quad_rule)
     p = getpoints(quad_rule)
-    n_points = length(w)
+    geom_face_interpol = get_default_geom_interpolator(shape, Val{1})
     face_quad_rule = QuadratureRule{2,shape,T}[]
-    n_base_funcs = getnbasefunctions(itp)
-    geom_face_interpol = get_default_geom_interpolator(1, shape)
-    face_coords = reference_edges(shape, Val{2})
+    _populate_face_quad_rule!(face_quad_rule, geom_face_interpol, p, w)
+end
 
+function _populate_face_quad_rule!(face_quad_rule::Vector{QuadratureRule{2,shape,T}}, geom_face_interpol::Interpolation{1,shape,order}, p::Vector{Vec{1,T}}, w::Vector{T}) where {shape, order, T}
+    face_coords = reference_edges(shape, Val{2})
     for j = 1:get_num_faces(shape, Val{2})
         new_points = Vec{2,T}[]
         for (qp, ξ) in enumerate(p)

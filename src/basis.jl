@@ -36,12 +36,11 @@ function gradient_value(ip::Interpolation{dim}, j::Int, ξ::Tuple) where {dim}
 end
 
 # Default to nodal interpolator for geom
-function get_default_geom_interpolator(dim, shape)
-    @assert 1 <= dim <= 2 "No default interpolator available for $shape of dimension $dim"
-    if dim == 2
-        return Lagrange{dim,shape,1}()
-    end
-    return Lagrange{dim,shape,1}()
+function get_default_geom_interpolator(shape, ::Type{Val{1}})
+    return Lagrange{1,shape,1}()
+end
+function get_default_geom_interpolator(shape, ::Type{Val{2}})
+    return Lagrange{2,shape,1}()
 end
 ############
 # Dubiner #
@@ -233,8 +232,8 @@ end
 ####################
 # Lagrange
 ####################
-struct Lagrange{dim,shape,order,T} <: Interpolation{dim,shape,order}
-    nodal_base_coefs::T
+struct Lagrange{dim,shape,order} <: Interpolation{dim,shape,order}
+    nodal_base_coefs::Matrix{Float64}
     topology::Dict{Int,Int}
 end
 
@@ -258,7 +257,7 @@ function Lagrange{dim,shape,order}() where {dim,shape, order}
     prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
     V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
     nodal_base_coefs = inv(V)
-    Lagrange{dim, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs, topology)
+    Lagrange{dim, shape, order}(nodal_base_coefs, topology)
 end
 
 @inline getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
@@ -307,7 +306,7 @@ function _get_nodal_transformation_matrix(fe::Lagrange{dim,shape,order}) where {
     # Matrix to get spacial coordinates
     nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
     T = eltype(nodal_points[1])
-    geom_interpol = get_default_geom_interpolator(dim, shape)
+    geom_interpol = get_default_geom_interpolator(shape, Val{dim})
     qrs = QuadratureRule{dim,shape,T}(fill(T(NaN), length(nodal_points)), nodal_points) # weights will not be used
     n_qpoints = length(getweights(qrs))
     n_geom_basefuncs = getnbasefunctions(geom_interpol)
