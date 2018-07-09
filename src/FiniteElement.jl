@@ -1,4 +1,5 @@
 abstract type FiniteElement{dim,shape,FuncOrder,GeomOrder} end
+getshape(::FiniteElement{dim,shape}) where {dim,shape} = shape
 
 ####################
 # Template for Finite Elements

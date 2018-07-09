@@ -7,14 +7,14 @@ struct ParametricFacesFunctionSpace{dim,fdim,T,comps} <: AbstractFacesFunctionSp
     qr_face_weigths::Vector{T}
     qr_face_points::Vector{Vec{fdim,T}}
 end
-struct ParametricScalarFunctionSpace{dim,T<:Real,shape<:AbstractRefShape,order,gorder,M,N1,N2,N3} <: AbstractScalarFunctionSpace{dim,T,shape,order,M,N1,N2,N3}
+struct ParametricScalarFunctionSpace{dim,T<:Real,FE<:FiniteElement,M,N1,N2,N3} <: AbstractScalarFunctionSpace{dim,T,FE,M,N1,N2,N3}
     N::Matrix{T}
     dNdξ::Matrix{Vec{dim,T}}
     detJ::Matrix{T}
     Jinv::Matrix{Tensor{2,dim,T,M}}
     M::Matrix{T}
     qr_weights::Vector{T}
-    fe::FiniteElement{dim,shape,order,gorder}
+    fe::FE
     mesh::PolygonalMesh{dim,N1,N2,N3,T}
 end
 function _scalar_fs(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, quad_rule::QuadratureRule{dim,shape},
@@ -59,7 +59,7 @@ function _scalar_fs(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, quad_rule::Q
         end
     end
     MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
-    ParametricScalarFunctionSpace{dim,T,shape,order,MM,N1,N2,N3}(N, dNdξ, detJ, Jinv,
+    ParametricScalarFunctionSpace{dim,T,eltype(felem),MM,N1,N2,N3}(N, dNdξ, detJ, Jinv,
     M, getweights(quad_rule), felem, mesh)
 end
 
@@ -139,9 +139,9 @@ cell `cell` of the `ScalarFunctionSpace` object.
 
 #Vector Space
 # VectorFunctionSpace
-struct ParametricVectorFunctionSpace{dim,T<:Real,shape<:AbstractRefShape,order,gorder,M,N1,N2,N3} <: AbstractVectorFunctionSpace{dim,T,shape,order,M,N1,N2,N3}
+struct ParametricVectorFunctionSpace{dim,T<:Real,FE<:FiniteElement,M,N1,N2,N3} <: AbstractVectorFunctionSpace{dim,T,FE,M,N1,N2,N3}
     n_dof::Int
-    ssp::ParametricScalarFunctionSpace{dim,T,shape,order,gorder,M,N1,N2,N3}
+    ssp::ParametricScalarFunctionSpace{dim,T,FE,M,N1,N2,N3}
 end
 
 #Constructor

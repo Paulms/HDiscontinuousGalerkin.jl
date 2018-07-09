@@ -1,9 +1,9 @@
-abstract type AbstractVectorFunctionSpace{dim,T,shape,order,M,N1,N2,N3} <: DiscreteFunctionSpace{dim,T,shape} end
+abstract type AbstractVectorFunctionSpace{dim,T,FE<:FiniteElement,M,N1,N2,N3} <: DiscreteFunctionSpace{dim,T,FE} end
 
 # VectorFunctionSpace
-struct VectorFunctionSpace{dim,T<:Real,shape<:AbstractRefShape,order,M,N1,N2,N3} <: AbstractVectorFunctionSpace{dim,T,shape,order,M,N1,N2,N3}
+struct VectorFunctionSpace{dim,T<:Real,FE<:FiniteElement,M,N1,N2,N3} <: AbstractVectorFunctionSpace{dim,T,FE,M,N1,N2,N3}
     n_dof::Int
-    ssp::ScalarFunctionSpace{dim,T,shape,order,M,N1,N2,N3}
+    ssp::ScalarFunctionSpace{dim,T,FE,M,N1,N2,N3}
 end
 
 #Constructor

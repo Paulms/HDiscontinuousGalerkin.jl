@@ -40,7 +40,7 @@ dim = 2
 finiteElement = GenericFiniteElement(Dubiner{dim,RefTetrahedron,1}())
 Wh, Whf = ScalarFunctionSpace(mesh, finiteElement)
 Vh, Vhf = VectorFunctionSpace(mesh, finiteElement)
-Mh = ScalarTraceFunctionSpace(mesh, Whf, Legendre{dim-1,RefTetrahedron,1}())
+Mh = ScalarTraceFunctionSpace(mesh, Whf, GenericFiniteElement(Legendre{dim-1,RefTetrahedron,1}()))
 
 # Declare variables
 û_h = TrialFunction(Mh)

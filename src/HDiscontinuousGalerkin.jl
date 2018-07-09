@@ -10,7 +10,7 @@ abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
 
 abstract type Interpolation{dim,shape,order} end
-abstract type DiscreteFunctionSpace{dim,T,refshape} end
+abstract type DiscreteFunctionSpace{dim,T,FE} end
 
 include("utils.jl")
 include("shapes.jl")

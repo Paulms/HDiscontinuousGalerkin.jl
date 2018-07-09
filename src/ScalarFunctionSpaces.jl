@@ -1,4 +1,4 @@
-abstract type AbstractScalarFunctionSpace{dim,T,shape,order,M,N1,N2,N3} <: DiscreteFunctionSpace{dim,T,shape} end
+abstract type AbstractScalarFunctionSpace{dim,T,FE<:FiniteElement,M,N1,N2,N3} <: DiscreteFunctionSpace{dim,T,FE} end
 abstract type AbstractFacesFunctionSpace{dim,fdim,T,comps} end
 
 # ScalarFunctionSpace
@@ -11,19 +11,19 @@ struct FacesFunctionSpace{dim,fdim,T,comps} <: AbstractFacesFunctionSpace{dim,fd
     qr_face_points::Vector{Vec{fdim,T}}
 end
 
-struct ScalarFunctionSpace{dim,T<:Real,shape<:AbstractRefShape,order,M,N1,N2,N3} <: AbstractScalarFunctionSpace{dim,T,shape,order,M,N1,N2,N3}
+struct ScalarFunctionSpace{dim,T<:Real,FE<:FiniteElement,M,N1,N2,N3} <: AbstractScalarFunctionSpace{dim,T,FE,M,N1,N2,N3}
     N::Matrix{T}
     dNdξ::Matrix{Vec{dim,T}}
     detJ::Vector{T}
     Jinv::Vector{Tensor{2,dim,T,M}}
     M::Matrix{T}
     qr_weights::Vector{T}
-    fe::FiniteElement{dim,shape,order,1}
+    fe::FE
     mesh::PolygonalMesh{dim,N1,N2,N3,T}
 end
 
-function ScalarFunctionSpace(mesh::PolygonalMesh, felem::FiniteElement{dim,shape,order,gorder};face_data = true,
-    quad_degree = order+1) where {dim, shape, order,gorder}
+function ScalarFunctionSpace(mesh::PolygonalMesh, felem::FiniteElement{dim,shape,order,gorder};face_data::Bool = true,
+    quad_degree::Int = order+1) where {dim, shape, order,gorder}
     quad_rule = QuadratureRule{dim,shape}(DefaultQuad(), quad_degree)
     fs = _scalar_fs(Float64, mesh, quad_rule, felem)
     fd = face_data ? _sface_data(Float64, mesh, quad_degree, felem) : nothing
@@ -74,7 +74,7 @@ function _scalar_fs(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, quad_rule::Q
         Jinv[k] = inv(fe_J)
     end
     MM = Tensors.n_components(Tensors.get_base(eltype(Jinv)))
-    ScalarFunctionSpace{dim,T,shape,order,MM,N1,N2,N3}(N, dNdξ, detJ, Jinv,
+    ScalarFunctionSpace{dim,T,typeof(felem),MM,N1,N2,N3}(N, dNdξ, detJ, Jinv,
     M, getweights(quad_rule), felem, mesh)
 end
 

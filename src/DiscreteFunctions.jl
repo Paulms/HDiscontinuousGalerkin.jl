@@ -41,41 +41,40 @@ function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}) where {dim,T}
 end
 
 # Trial Functions
-struct TrialFunction{dim,T,refshape,N}
-    fs::DiscreteFunctionSpace{dim,T,refshape}
-    m_values::Array{T,N}
+struct TrialFunction{dim,T,shape,N1}
+    fs::DiscreteFunctionSpace
+    m_values::Array{T,N1}
     components::Int
 end
 
 @inline getnbasefunctions(u::TrialFunction) = getnbasefunctions(u.fs)
 @inline getfunctionspace(u::TrialFunction) = u.fs
 @inline getnlocaldofs(u::TrialFunction) = getnlocaldofs(getfunctionspace(u))
-@inline getrefshape(u::TrialFunction{dim,T,refshape}) where {dim,T,refshape} = refshape
 @inline getncomponents(u::TrialFunction) = u.components
 
 function TrialFunction(fs::ScalarTraceFunctionSpace{dim,T}) where {dim,T}
     mesh = getmesh(fs)
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs), n_faces_per_cell(mesh))
-    return TrialFunction(fs, m_values, 1)
+    return TrialFunction{dim,T,getshape(getfiniteelement(fs)),3}(fs, m_values, 1)
 end
 
 function TrialFunction(fs::ScalarFunctionSpace{dim,T}) where {dim,T}
     mesh = getmesh(fs)
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
-    return TrialFunction(fs, m_values, 1)
+    return TrialFunction{dim,T,getshape(getfiniteelement(fs)),2}(fs, m_values, 1)
 end
 
 function TrialFunction(fs::VectorFunctionSpace{dim,T}) where {dim,T}
     mesh = getmesh(fs)
     m_values = fill(zero(T) * T(NaN), getncells(mesh), getnbasefunctions(fs))
-    return TrialFunction(fs, m_values, dim)
+    return TrialFunction{dim,T,getshape(getfiniteelement(fs)),2}(fs, m_values, dim)
 end
 
 function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values::Array{T,N}) where {dim,T,N}
     mesh = getmesh(fs)
     @assert size(m_values,1) == getncells(mesh)
     @assert size(m_values,2) == getnbasefunctions(fs)
-    return TrialFunction(fs, m_values, components)
+    return TrialFunction{dim,T,getshape(getfiniteelement(fs)),N}(fs, m_values, components)
 end
 
 """

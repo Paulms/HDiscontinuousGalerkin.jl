@@ -56,7 +56,7 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
     # Compute dofs for element and total element dofs for cell
     for n_element in 0:n_max_topology_elements-1
         n_el_dofs_cell = gettopology(felem)[n_element]
-        n_el_cell = gettopology(getrefshape(field), Val{2})[n_element]
+        n_el_cell = gettopology(refshape, Val{2})[n_element]
         @assert mod(n_el_dofs_cell, n_el_cell) == 0
         push!(nelementdofs,Int(n_el_dofs_cell/n_el_cell))
         push!(ncellelementdofs,n_el_dofs_cell)
