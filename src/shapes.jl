@@ -50,9 +50,9 @@ function get_nodal_points(::Type{RefTetrahedron}, ::Type{Val{2}}, order)
     append!(points, vertices)
     push!(topology, 0=>length(points))
     [append!(points, _interior_points(verts, order)) for verts in reference_edges(RefTetrahedron, Val{2})]
-    push!(topology, 2=>length(points)-topology[0])
+    push!(topology, 1=>length(points)-topology[0])
     append!(points, _interior_points(vertices, order))
-    push!(topology, 1=>length(points)-topology[0]-topology[2])
+    push!(topology, 2=>length(points)-topology[0]-topology[1])
     points, topology
 end
 

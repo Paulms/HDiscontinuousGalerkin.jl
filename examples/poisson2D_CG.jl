@@ -30,7 +30,7 @@ using Tensors
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
-mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (500,500), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
 dim = 2

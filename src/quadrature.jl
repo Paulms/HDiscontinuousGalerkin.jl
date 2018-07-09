@@ -49,6 +49,14 @@ function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interp
     _populate_face_quad_rule!(face_quad_rule, geom_face_interpol, p, w)
 end
 
+function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}) where {T,shape}
+    w = getweights(quad_rule)
+    p = getpoints(quad_rule)
+    geom_face_interpol = get_default_geom_interpolator(shape, Val{1})
+    face_quad_rule = QuadratureRule{2,shape,T}[]
+    _populate_face_quad_rule!(face_quad_rule, geom_face_interpol, p, w)
+end
+
 function _populate_face_quad_rule!(face_quad_rule::Vector{QuadratureRule{2,shape,T}}, geom_face_interpol::Interpolation{1,shape,order}, p::Vector{Vec{1,T}}, w::Vector{T}) where {shape, order, T}
     face_coords = reference_edges(shape, Val{2})
     for j = 1:get_num_faces(shape, Val{2})

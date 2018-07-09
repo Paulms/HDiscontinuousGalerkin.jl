@@ -249,6 +249,16 @@ function getdafaultdualbasis(dim::Int,shape,order::Int)
     end
 end
 
+function defaultDualBasis(dim::Int,shape,order::Int)
+    if dim == 1
+        return Legendre{1,shape,order}()
+    elseif dim == 2
+        return Dubiner{2,shape,order}()
+    else
+        throw("Not dual basis available for dimension $dim")
+    end
+end
+
 function Lagrange{dim,shape,order}() where {dim,shape, order}
     nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
     nodals=[x->x(point) for point in nodal_points]

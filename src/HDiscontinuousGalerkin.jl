@@ -17,15 +17,17 @@ include("shapes.jl")
 include("mesh.jl")
 include("generate_mesh.jl")
 include("triangle_mesh.jl")
+include("FiniteElement.jl")
 include("basis.jl")
 include("quadrature.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
-include("FunctionSpace.jl")
+#include("FunctionSpace.jl")
+include("ScalarFunctionSpaces.jl")
 include("assembler.jl")
-include("DiscreteFunctions.jl")
-include("dofhandler.jl")
-include("boundary.jl")
+#include("DiscreteFunctions.jl")
+#include("dofhandler.jl")
+#include("boundary.jl")
 
 
 # Function exports
@@ -64,6 +66,9 @@ export get_default_geom_interpolator
 export getorder, getlowerdiminterpol
 export get_topology, get_interpolation
 
+# finite Elements
+export ContinuousLagrange
+
 #utils
 export get_affine_map
 
@@ -76,13 +81,13 @@ export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJdS
 export face_shape_value
-export InterpolatedFunction, function_value, interpolate
 export spatial_coordinate, reference_coordinate
 export getnlocaldofs
 
 #Discrete Functions
 export TrialFunction
 export errornorm
+export InterpolatedFunction, function_value, interpolate
 
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!
