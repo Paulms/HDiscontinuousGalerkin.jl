@@ -13,9 +13,10 @@ mesh = parse_mesh_triangle(root_file)
 
 # ### Trial and test functions
 dim = 2
-Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
+finiteElement = GenericFiniteElement(Dubiner{dim,RefTetrahedron,1}())
+Wh, Whf = ScalarFunctionSpace(mesh, finiteElement)
+Vh, Vhf = VectorFunctionSpace(mesh, finiteElement)
+Mh = ScalarTraceFunctionSpace(mesh, Whf, Legendre{dim-1,RefTetrahedron,1}())
 
 # Variables
 û_h = TrialFunction(Mh)
@@ -37,12 +38,12 @@ end
 
 const sq2 = sqrt(2)
 const sq3 = sqrt(3)
-@test Wh.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
-@test Wh.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
-@test Wh.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.normals[1,:,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
+@test Whf.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
+@test Whf.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
+@test Whf.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
+@test Whf.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
+@test Whf.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
+@test Whf.normals[1,:,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
 
 # ### Boundary conditions
 dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
@@ -140,17 +141,17 @@ function doassemble(Vh, Wh, Mh, τ = 1)
         end
         #Face integrals
         for face_idx in 1:getnfaces(mesh.cells[cell_idx])
-            for q_point in 1:getnfacequadpoints(Wh)
-                dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
+            for q_point in 1:getnfacequadpoints(Whf)
+                dS = getdetJdS(Whf, cell_idx, face_idx, q_point)
                 orientation = face_orientation(mesh, cell_idx, face_idx)
                 for i in 1:n_basefuncs_s
-                    w = face_shape_value(Wh, face_idx, q_point, i)
+                    w = shape_value(Whf, face_idx, q_point, i)
                     for j in 1:n_basefuncs_s
-                        u = face_shape_value(Wh, face_idx, q_point, j)
+                        u = shape_value(Whf, face_idx, q_point, j)
                         # Integral_∂T τ*u ⋅ w dS
                         Ce[i,j] += τ*(u*w) * dS
                     end
-                    w = face_shape_value(Wh, face_idx, q_point, i, orientation)
+                    w = shape_value(Whf, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T τ*û*w  dS
@@ -158,9 +159,9 @@ function doassemble(Vh, Wh, Mh, τ = 1)
                     end
                 end
                 dS = getdetJdS(Mh, cell_idx, face_idx, q_point)
-                n = get_normal(Vh, cell_idx, face_idx)
+                n = get_normal(Vhf, cell_idx, face_idx)
                 for i in 1:n_basefuncs
-                    v = face_shape_value(Vh, face_idx, q_point, i, orientation)
+                    v = shape_value(Vhf, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T û(v⋅n)  dS

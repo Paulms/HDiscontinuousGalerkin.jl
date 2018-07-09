@@ -17,17 +17,20 @@ include("shapes.jl")
 include("mesh.jl")
 include("generate_mesh.jl")
 include("triangle_mesh.jl")
-include("FiniteElement.jl")
 include("basis.jl")
+include("FiniteElement.jl")
+include("LagrangeFE.jl")
 include("quadrature.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
-#include("FunctionSpace.jl")
 include("ScalarFunctionSpaces.jl")
+include("VectorFunctionSpaces.jl")
+include("TraceFunctionSpaces.jl")
+include("ParametricFunctionSpaces.jl")
 include("assembler.jl")
-#include("DiscreteFunctions.jl")
-#include("dofhandler.jl")
-#include("boundary.jl")
+include("DiscreteFunctions.jl")
+include("dofhandler.jl")
+include("boundary.jl")
 
 
 # Function exports
@@ -64,10 +67,10 @@ export value, derivative, gradient_value
 export getnbasefunctions
 export get_default_geom_interpolator
 export getorder, getlowerdiminterpol
-export get_topology, get_interpolation
+export gettopology, get_interpolation
 
 # finite Elements
-export ContinuousLagrange
+export ContinuousLagrange, GenericFiniteElement
 
 #utils
 export get_affine_map

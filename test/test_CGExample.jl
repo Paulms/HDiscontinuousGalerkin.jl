@@ -4,7 +4,7 @@ mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
 
 # Declare variables
 u_h = TrialFunction(Wh)

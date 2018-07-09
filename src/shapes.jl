@@ -8,7 +8,7 @@ struct RefTetrahedron <: AbstractRefShape end
 function reference_coordinates(::Type{RefTetrahedron}, ::Type{Val{1}})
     return [Vec{1, Float64}((0.0,)),Vec{1, Float64}((1.0,))]
 end
-function get_topology(::Type{RefTetrahedron}, ::Type{Val{1}})
+function gettopology(::Type{RefTetrahedron}, ::Type{Val{1}})
     return Dict(0=>2,1=>1)
 end
 function reference_coordinates(::Type{RefTetrahedron}, ::Type{Val{2}})
@@ -23,7 +23,7 @@ function reference_edges(::Type{RefTetrahedron},::Type{Val{2}})
 end
 @inline reference_edge_nodes(::Type{RefTetrahedron},::Type{Val{2}}) = ((2,3),(3,1),(1,2))
 
-function get_topology(::Type{RefTetrahedron}, ::Type{Val{2}})
+function gettopology(::Type{RefTetrahedron}, ::Type{Val{2}})
     return Dict(0=>3,1=>3,2=>1)
 end
 

@@ -30,11 +30,11 @@ using Tensors
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
-mesh = rectangle_mesh(TriangleCell, (500,500), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
 
 # Declare variables
 u_h = TrialFunction(Wh)
@@ -76,12 +76,12 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
     cell_dofs = Vector{Int}(ndofs_per_cell(dh))
-    assembler = start_assemble(K, b)
 
     # Next we define the global force vector `f` and
     # create an assembler. The assembler
     # is just a thin wrapper around `f` and `K` and some extra storage
     # to make the assembling faster.
+    assembler = start_assemble(K, b)
     ff = interpolate(f, Wh)
 
     # It is now time to loop over all the cells in our grid.

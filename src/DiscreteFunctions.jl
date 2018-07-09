@@ -103,7 +103,7 @@ function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T}) where {dim,T
     mesh = getmesh(u_h.fs)
     ξ = reference_coordinate(u_h.fs, cell, mesh.nodes[mesh.cells[cell].nodes[1]].x, x)
     for i in 1:getnbasefunctions(u_h.fs)
-        u  += u_h.m_values[cell, i]*value(get_interpolation(u_h.fs), i, ξ)
+        u  += u_h.m_values[cell, i]*value(getfiniteelement(u_h.fs), i, ξ)
     end
     return u
 end

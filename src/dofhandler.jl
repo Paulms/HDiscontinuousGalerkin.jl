@@ -101,12 +101,12 @@ function _distribute_dofs(dh::DofHandler{dim,T,shape}) where {dim,T,shape}
     push!(dh.cell_dofs_offset, 1) # dofs for the first cell start at 1
 
     # Get topologies
-    n_max_topology_elements = maximum(keys(get_topology(shape, Val{dim})))
-    geometric_cell_topology = get_topology(shape, Val{dim})
+    n_max_topology_elements = maximum(keys(gettopology(shape, Val{dim})))
+    geometric_cell_topology = gettopology(shape, Val{dim})
     # loop over all the cells, and distribute dofs for all the fields
     for (ci, cell) in enumerate(get_cells(dh.mesh))
         for fi in 1:nvariables(dh)
-            cell_topology = get_topology(get_interpolation(getfunctionspace(dh.variables[fi])))
+            cell_topology = gettopology(getfiniteelement(getfunctionspace(dh.variables[fi])))
             for n_element in 0:n_max_topology_elements-1
                 n_el_dofs_cell = cell_topology[n_element]
                 n_el_cell = geometric_cell_topology[n_element]
