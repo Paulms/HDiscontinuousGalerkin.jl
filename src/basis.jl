@@ -13,6 +13,8 @@ Return the polynomial order of the `Interpolation`
 """
 @inline getorder(ip::Interpolation{dim,shape,order}) where {dim,shape,order} = order
 
+@inline gettopology(ip::Interpolation) = Dict{Int,Int}()
+
 """
 Compute the value of the shape functions at a point ξ for a given interpolation
 """
@@ -36,12 +38,11 @@ function gradient_value(ip::Interpolation{dim}, j::Int, ξ::Tuple) where {dim}
 end
 
 # Default to nodal interpolator for geom
-function get_default_geom_interpolator(dim, shape)
-    @assert 1 <= dim <= 2 "No default interpolator available for $shape of dimension $dim"
-    if dim == 2
-        return Lagrange{dim,shape,1}()
-    end
-    return Lagrange{dim,shape,1}()
+function get_default_geom_interpolator(shape, ::Type{Val{1}})
+    return Lagrange{1,shape,1}()
+end
+function get_default_geom_interpolator(shape, ::Type{Val{2}})
+    return Lagrange{2,shape,1}()
 end
 ############
 # Dubiner #
@@ -169,7 +170,7 @@ function dubiner(x,y,n::Integer,m::Integer)
     #check domain
     @assert ((y>=0)&&(x>=0))&&(1>=x+y) "point not in domain"
     # Map to reference square
-    ξ=2*x/(1-y)-1
+    ξ=abs(x) < eps() ? -one(typeof(x)) : 2*x/(1-y)-1
     η=2*y-1
     k=2*n+1
     #Compute Dubiner_nm(ξ, η)
@@ -188,7 +189,7 @@ function ∇dubiner(x,y,n::Integer,m::Integer)
     #check domain
     @assert ((y>=0)&&(x>=0))&&(1>=x+y) "point not in domain"
     # Map to reference square
-    ξ=2*x/(1-y)-1
+    ξ=abs(x) < eps() ? -one(typeof(x)) : 2*x/(1-y)-1
     k=2*n+1
     η=2*y-1
     #Compute ∇Dubiner_nm(ξ, η)
@@ -233,14 +234,24 @@ end
 ####################
 # Lagrange
 ####################
-struct Lagrange{dim,shape,order,T} <: Interpolation{dim,shape,order}
-    nodal_base_coefs::T
+struct Lagrange{dim,shape,order} <: Interpolation{dim,shape,order}
+    nodal_base_coefs::Matrix{Float64}
     topology::Dict{Int,Int}
 end
 
 isnodal(ip::Lagrange) = true
 
 function getdafaultdualbasis(dim::Int,shape,order::Int)
+    if dim == 1
+        return Legendre{1,shape,order}()
+    elseif dim == 2
+        return Dubiner{2,shape,order}()
+    else
+        throw("Not dual basis available for dimension $dim")
+    end
+end
+
+function defaultDualBasis(dim::Int,shape,order::Int)
     if dim == 1
         return Legendre{1,shape,order}()
     elseif dim == 2
@@ -258,12 +269,12 @@ function Lagrange{dim,shape,order}() where {dim,shape, order}
     prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
     V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))
     nodal_base_coefs = inv(V)
-    Lagrange{dim, shape, order, typeof(nodal_base_coefs)}(nodal_base_coefs, topology)
+    Lagrange{dim, shape, order}(nodal_base_coefs, topology)
 end
 
 @inline getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
 @inline getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
-@inline get_topology(ip::Lagrange{dim,RefTetrahedron,order}) where {dim,order} = ip.topology
+@inline gettopology(ip::Lagrange{dim,RefTetrahedron,order}) where {dim,order} = ip.topology
 
 """
 return interpolator of the same type with dim = dim -1
@@ -294,12 +305,6 @@ on the reference triangle ((0,0),(1,0),(0,1))
 """
 function gradient_value(ip::Lagrange{dim,RefTetrahedron,order}, k::Int, ξ::Vec{dim,T}) where {dim,order,T}
     if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
-    # a = nodal_basis_coefs[1,k]*gradient_value(interpolation, 1, ξ)
-    # n = getnbasefunctions(ip)
-    # for j in 2:n
-    #     a += nodal_basis_coefs[j,k]*gradient_value(interpolation, j, ξ)
-    # end
-    # return a
     gradient(ξ -> value(ip, k, ξ), ξ)
 end
 
@@ -307,7 +312,7 @@ function _get_nodal_transformation_matrix(fe::Lagrange{dim,shape,order}) where {
     # Matrix to get spacial coordinates
     nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
     T = eltype(nodal_points[1])
-    geom_interpol = get_default_geom_interpolator(dim, shape)
+    geom_interpol = get_default_geom_interpolator(shape, Val{dim})
     qrs = QuadratureRule{dim,shape,T}(fill(T(NaN), length(nodal_points)), nodal_points) # weights will not be used
     n_qpoints = length(getweights(qrs))
     n_geom_basefuncs = getnbasefunctions(geom_interpol)
@@ -355,16 +360,5 @@ on the reference line (0,1)
 """
 function gradient_value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
     if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
-    # a = 0; b = 1;
-    # if k==0
-    #     return a
-    # elseif k==1
-    #     return b
-    # else
-    #     for n=2:k
-    #         J =((n+1)/2)* jacobi(ξ,k-1,1,1) ;
-    #     end
-    # end
-    # return 2*sqrt(2*k+1)*J
     gradient(ξ -> value(ip, k, ξ), ξ)
 end

@@ -13,18 +13,23 @@ abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
 
 abstract type Interpolation{dim,shape,order} end
-abstract type DiscreteFunctionSpace{dim,T,refshape} end
+abstract type DiscreteFunctionSpace{dim,T,FE} end
 
+include("utils.jl")
 include("shapes.jl")
 include("mesh.jl")
 include("generate_mesh.jl")
 include("triangle_mesh.jl")
 include("basis.jl")
+include("FiniteElement.jl")
+include("LagrangeFE.jl")
 include("quadrature.jl")
-include("utils.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
-include("FunctionSpace.jl")
+include("ScalarFunctionSpaces.jl")
+include("VectorFunctionSpaces.jl")
+include("TraceFunctionSpaces.jl")
+include("ParametricFunctionSpaces.jl")
 include("assembler.jl")
 include("DiscreteFunctions.jl")
 include("dofhandler.jl")
@@ -35,7 +40,7 @@ include("boundary.jl")
 # mesh
 export parse_mesh_triangle, cell_diameter, get_coordinates
 export nodes, faces, cells, get_cells, get_faces, get_nodes, node
-export Cell, Node, Face, PolygonalMesh
+export Cell, Node, PolygonalMesh
 export getncells, getnfaces, n_faces_per_cell, get_normal
 export face_orientation, get_faceset
 export rectangle_mesh
@@ -56,7 +61,7 @@ export get_num_vertices
 export QuadratureRule
 export RefTetrahedron
 export DefaultQuad, GrundmannMoeller, Strang, GaussLegendre
-export getpoints, getweights
+export getpoints, getweights, integrate
 
 # basis
 export Dubiner, Lagrange, jacobi, Legendre
@@ -65,10 +70,13 @@ export value, derivative, gradient_value
 export getnbasefunctions
 export get_default_geom_interpolator
 export getorder, getlowerdiminterpol
-export get_topology, get_interpolation
+export gettopology, get_interpolation
+
+# finite Elements
+export ContinuousLagrange, GenericFiniteElement
 
 #utils
-export get_affine_map, integrate, zcheck!, zcheck
+export get_affine_map
 
 #Assembler
 export start_assemble, assemble!, end_assemble
@@ -79,13 +87,13 @@ export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJdS
 export face_shape_value
-export InterpolatedFunction, function_value, interpolate
 export spatial_coordinate, reference_coordinate
 export getnlocaldofs
 
 #Discrete Functions
 export TrialFunction
 export errornorm
+export InterpolatedFunction, function_value, interpolate
 
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!

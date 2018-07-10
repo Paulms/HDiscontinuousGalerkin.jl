@@ -15,9 +15,9 @@ struct GaussLegendre <: AbstractQuadratureRule end
 
 # utils
 function (::Type{QuadratureRule{2,RefTetrahedron}})(quad_type::DefaultQuad, order::Int)
-    if order <= 5
+    if order <= 6
         return QuadratureRule{2,RefTetrahedron}(Strang(),order)
-    elseif order > 5 && isodd(order)
+    elseif order > 6 && isodd(order)
         s = Int((order-1)/2)
         return QuadratureRule{2,RefTetrahedron}(GrundmannMoeller(),s)
     else
@@ -44,12 +44,21 @@ Face Quadrature Rules
 function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interpolation{2,shape}) where {T,shape}
     w = getweights(quad_rule)
     p = getpoints(quad_rule)
-    n_points = length(w)
+    geom_face_interpol = get_default_geom_interpolator(shape, Val{1})
     face_quad_rule = QuadratureRule{2,shape,T}[]
-    n_base_funcs = getnbasefunctions(itp)
-    geom_face_interpol = get_default_geom_interpolator(1, shape)
-    face_coords = reference_edges(shape, Val{2})
+    _populate_face_quad_rule!(face_quad_rule, geom_face_interpol, p, w)
+end
 
+function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}) where {T,shape}
+    w = getweights(quad_rule)
+    p = getpoints(quad_rule)
+    geom_face_interpol = get_default_geom_interpolator(shape, Val{1})
+    face_quad_rule = QuadratureRule{2,shape,T}[]
+    _populate_face_quad_rule!(face_quad_rule, geom_face_interpol, p, w)
+end
+
+function _populate_face_quad_rule!(face_quad_rule::Vector{QuadratureRule{2,shape,T}}, geom_face_interpol::Interpolation{1,shape,order}, p::Vector{Vec{1,T}}, w::Vector{T}) where {shape, order, T}
+    face_coords = reference_edges(shape, Val{2})
     for j = 1:get_num_faces(shape, Val{2})
         new_points = Vec{2,T}[]
         for (qp, ξ) in enumerate(p)
@@ -63,4 +72,18 @@ function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interp
         push!(face_quad_rule, QuadratureRule{2,shape,T}(w, new_points))
     end
     return face_quad_rule
+end
+
+#OTher Functions
+"""
+function integrate(f::function,qr::QuadratureRule)
+integrate function f on reference shape of quadrature qr
+"""
+function integrate(f::Function,qr::QuadratureRule)
+    p = getpoints(qr); w = getweights(qr)
+    int_val = zero(typeof(f(p[1])))
+    for (i,x) in enumerate(p)
+        int_val += f(x)*w[i]
+    end
+    int_val
 end

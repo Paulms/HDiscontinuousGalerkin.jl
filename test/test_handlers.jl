@@ -3,8 +3,8 @@ using Tensors
 
 mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
-u_h = TrialFunction(Wh, mesh)
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
+u_h = TrialFunction(Wh)
 
 dh = DofHandler([u_h],mesh)
 

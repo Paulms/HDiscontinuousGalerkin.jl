@@ -3,15 +3,15 @@
 
 Construct a `DofHandler` based on the grid `grid`.
 """
-struct DofHandler{dim,T,shape,N,M,L,K}
-    variables::Vector{TrialFunction{dim,T,shape,K}}
+struct DofHandler{dim,T,shape,N,M,L}
+    variables::Vector{TrialFunction{dim,T,shape}}
     cell_dofs::Vector{Int}
     cell_dofs_offset::Vector{Int}
     mesh::PolygonalMesh{dim,N,M,L,T}
 end
 
-function DofHandler(varSet::Vector{TrialFunction{dim,T,shape,K}}, mesh::PolygonalMesh{dim,N,M,L,T}) where {dim,N,M,L,T,shape,K}
-    dofhandler = DofHandler(varSet, Int[], Int[], mesh)
+function DofHandler(varSet::Vector{TrialFunction{dim,T,shape,K}}, mesh::PolygonalMesh{dim,N,M,L,T}) where {dim,T,shape,N,M,L,K}
+    dofhandler = DofHandler{dim,T,shape,N,M,L}(varSet, Int[], Int[], mesh)
     _distribute_dofs(dofhandler)
 end
 
@@ -101,12 +101,12 @@ function _distribute_dofs(dh::DofHandler{dim,T,shape}) where {dim,T,shape}
     push!(dh.cell_dofs_offset, 1) # dofs for the first cell start at 1
 
     # Get topologies
-    n_max_topology_elements = maximum(keys(get_topology(shape, Val{dim})))
-    geometric_cell_topology = get_topology(shape, Val{dim})
+    n_max_topology_elements = maximum(keys(gettopology(shape, Val{dim})))
+    geometric_cell_topology = gettopology(shape, Val{dim})
     # loop over all the cells, and distribute dofs for all the fields
     for (ci, cell) in enumerate(get_cells(dh.mesh))
         for fi in 1:nvariables(dh)
-            cell_topology = get_topology(get_interpolation(getfunctionspace(dh.variables[fi])))
+            cell_topology = gettopology(getfiniteelement(getfunctionspace(dh.variables[fi])))
             for n_element in 0:n_max_topology_elements-1
                 n_el_dofs_cell = cell_topology[n_element]
                 n_el_cell = geometric_cell_topology[n_element]

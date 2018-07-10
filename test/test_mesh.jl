@@ -20,7 +20,7 @@ end
 @test [face_orientation(mesh,1,i) for i in 1:3] == [true,false,true]
 @test cell_diameter(mesh,1) == 1.0
 @test get_faceset(mesh, "boundary") == Set([3,6,7,8])
-@test get_coordinates(mesh.faces[1], mesh) == [Vec{2}([1.0, 1.0]), Vec{2}([0.5, 0.5])]
+@test get_coordinates(1, mesh) == [Vec{2}([1.0, 1.0]), Vec{2}([0.5, 0.5])]
 @test getnfaces(mesh.cells[1]) == 3
 
 #Test generated mesh

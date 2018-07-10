@@ -34,10 +34,10 @@ mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}());
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
 
 # Declare variables
-u_h = TrialFunction(Wh, mesh);
+u_h = TrialFunction(Wh)
 
 # ### Degrees of freedom
 # Next we need to define a `DofHandler`, which will take care of numbering
@@ -60,7 +60,7 @@ fill!(K.nzval, 1.0);
 spy(K; height = 15)
 
 # ### Boundary conditions
-dbc = Dirichlet(u_h, dh, "boundary", x -> 0);
+dbc = Dirichlet(u_h, dh, "boundary", [0.0])
 
 # ### RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -75,14 +75,14 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     Ke = zeros(n_basefuncs, n_basefuncs)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
-    cell_dofs = Vector{Int}(undef, ndofs_per_cell(dh))
-    assembler = start_assemble(K, b)
+    cell_dofs = Vector{Int}(ndofs_per_cell(dh))
 
     # Next we define the global force vector `f` and
     # create an assembler. The assembler
     # is just a thin wrapper around `f` and `K` and some extra storage
     # to make the assembling faster.
-    ff = interpolate(f, Wh, mesh)
+    assembler = start_assemble(K, b)
+    ff = interpolate(f, Wh)
 
     # It is now time to loop over all the cells in our grid.
     @inbounds for cell_idx in 1:getncells(mesh)
@@ -130,35 +130,35 @@ K, b = doassemble(Wh, K, dh);
 apply!(K,b,dbc);
 u = K \ b;
 
-reconstruct!(u_h, u, dh);
+# reconstruct!(u_h, u, dh)
+# #
+# # # ### Compute errors
+# u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
+# Etu_h = errornorm(u_h, u_ex)
+# Etu_h <= 0.0002
 #
-# # ### Compute errors
-u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-Etu_h = errornorm(u_h, u_ex, mesh)
-Etu_h <= 0.0002
-
-# ### Plot Solution
-#Plot mesh
-using PyCall
-using PyPlot
-@pyimport matplotlib.tri as mtri
-m_nodes = get_vertices_matrix(mesh)
-triangles = get_cells_matrix(mesh)
-triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
-PyPlot.triplot(triang, "ko-")
-
-nodalu_h = Vector{Float64}(length(mesh.nodes))
-share_count = zeros(Int,length(mesh.nodes))
-fill!(nodalu_h,0)
-for (k,cell) in enumerate(mesh.cells)
-    for node in cell.nodes
-        u = value(u_h, k, mesh.nodes[node].x)
-        nodalu_h[node] += u
-        share_count[node] += 1
-    end
-end
-nodalu_h = nodalu_h./share_count
-u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
-nodalu_h
-nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
-PyPlot.tricontourf(triang, nuh)
+# # ### Plot Solution
+# #Plot mesh
+# using PyCall
+# using PyPlot
+# @pyimport matplotlib.tri as mtri
+# m_nodes = get_vertices_matrix(mesh)
+# triangles = get_cells_matrix(mesh)
+# triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+# PyPlot.triplot(triang, "ko-")
+#
+# nodalu_h = Vector{Float64}(length(mesh.nodes))
+# share_count = zeros(Int,length(mesh.nodes))
+# fill!(nodalu_h,0)
+# for (k,cell) in enumerate(mesh.cells)
+#     for node in cell.nodes
+#         u = value(u_h, k, mesh.nodes[node].x)
+#         nodalu_h[node] += u
+#         share_count[node] += 1
+#     end
+# end
+# nodalu_h = nodalu_h./share_count
+# u_ex_i = sin.(π*m_nodes[:,1]).*sin.(π*m_nodes[:,2])
+# nodalu_h
+# nuh = [abs(x) < eps() ? 0.0 : x for x in nodalu_h]
+# PyPlot.tricontourf(triang, nuh)

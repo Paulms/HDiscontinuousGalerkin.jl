@@ -31,28 +31,32 @@ function _check_node_data(nodes, n1,n2,n3)
     return (n1,n2,n3)
 end
 
-function _build_cells(cells::Vector{TriangleCell}, el_nodes, el_faces,n_el, faces, facesdict,nodes)
+function _build_cells(face_idx, cells::Vector{TriangleCell}, el_nodes, el_faces,n_el, faces, facesdict,nodes)
     fill!(el_faces,0)
     #build faces
     for (i,fn_id) in enumerate(reference_edge_nodes(RefTetrahedron, Val{2}))
         v1 = el_nodes[fn_id[1]]; v2 = el_nodes[fn_id[2]]
-        element = (min(v1,v2),max(v1,v2))
+        element = minmax(v1,v2)
         token = ht_keyindex2!(facesdict, element)
         if token > 0
                 el_faces[i] = facesdict.vals[token]
-                if !(n_el in faces[facesdict.vals[token]].cells)
-                    push!(faces[facesdict.vals[token]].cells,n_el)
+                if n_el != faces[facesdict.vals[token],4]
+                    faces[facesdict.vals[token],4] = n_el
                 end
         else
-            Base._setindex!(facesdict, length(faces)+1, element, -token)
-            face = Face([n_el],(v1,v2))
-            push!(faces, face)
-            el_faces[i] = length(faces)
+            face_idx = face_idx + 1
+            Base._setindex!(facesdict, face_idx, element, -token)
+            faces[face_idx,1] = v1
+            faces[face_idx,2] = v2
+            faces[face_idx,3] = n_el
+            faces[face_idx,4] = 0
+            el_faces[i] = face_idx
         end
     end
     #save cell
-    cell = TriangleCell(el_nodes, (el_faces...,))
+    cell = TriangleCell(el_nodes, (el_faces[1],el_faces[2],el_faces[3]))
     push!(cells, cell)
+    return face_idx
 end
 
 """
@@ -81,7 +85,7 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     nodes = Node{2,T}[]
     _generate_2d_nodes!(nodes, n_nodes_x, n_nodes_y, LL, LR, UR, UL)
 
-    faces = Vector{Face{2}}()
+    faces = Matrix{Int}(nel[1]+nel[2]+3*nel[1]*nel[2],4)
 
     # Generate cells
     node_array = reshape(collect(1:n_nodes), (n_nodes_x, n_nodes_y))
@@ -89,14 +93,15 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     facesdict = Dict{NTuple{2,Int},Int}()
     el_faces = [0,0,0]
     n_el = 0
+    face_idx = 0
     for j in 1:nel_y, i in 1:nel_x
         n_el = n_el + 1
         el_nodes = _check_node_data(nodes, node_array[i,j], node_array[i+1,j], node_array[i,j+1])
-        _build_cells(cells, el_nodes, el_faces,n_el, faces, facesdict,nodes) # ◺
+        face_idx = _build_cells(face_idx, cells, el_nodes, el_faces,n_el, faces, facesdict,nodes) # ◺
 
         n_el = n_el + 1
         el_nodes = _check_node_data(nodes, node_array[i+1,j], node_array[i+1,j+1], node_array[i,j+1])
-        _build_cells(cells, el_nodes, el_faces,n_el, faces, facesdict,nodes) # ◹
+        face_idx = _build_cells(face_idx,cells, el_nodes, el_faces,n_el, faces, facesdict,nodes) # ◹
     end
 
     # Add faces sets
@@ -104,16 +109,16 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     rightSet = Set{Int}()
     topSet = Set{Int}()
     leftSet = Set{Int}()
-    for k in 1:length(faces)
+    for k in 1:face_idx
         ref = 0
-        if length(faces[k].cells) == 1
-            if (nodes[faces[k].nodes[1]].x[2] == LL[2] && nodes[faces[k].nodes[2]].x[2] == LL[2])
+        if faces[k,4] == 0
+            if (nodes[faces[k,1]].x[2] == LL[2] && nodes[faces[k,2]].x[2] == LL[2])
                 push!(bottomSet, k)
-            elseif (nodes[faces[k].nodes[1]].x[1] == UR[1] && nodes[faces[k].nodes[2]].x[1] == UR[1])
+            elseif (nodes[faces[k,1]].x[1] == UR[1] && nodes[faces[k,2]].x[1] == UR[1])
                 push!(rightSet, k)
-            elseif (nodes[faces[k].nodes[1]].x[2] == UR[2] && nodes[faces[k].nodes[2]].x[2] == UR[2])
+            elseif (nodes[faces[k,1]].x[2] == UR[2] && nodes[faces[k,2]].x[2] == UR[2])
                 push!(topSet, k)
-            elseif (nodes[faces[k].nodes[1]].x[1] == LL[1] && nodes[faces[k].nodes[2]].x[1] == LL[1])
+            elseif (nodes[faces[k,1]].x[1] == LL[1] && nodes[faces[k,2]].x[1] == LL[1])
                 push!(leftSet, k)
             else
                 throw("Face $k belongs to one cell but is not in boundary")
