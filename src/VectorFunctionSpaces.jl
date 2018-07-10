@@ -42,12 +42,12 @@ function shape_gradient(fs::VectorFunctionSpace{dim,T}, q_point::Int, base_func:
     dN_comp = zeros(T, dim, dim)
     n = size(fs.ssp.N,1)
     dN_comp[div(base_func,n+1)+1, :] = fs.ssp.dNdξ[mod1(base_func,n), q_point]
-    return Tensor{2,dim,T}((dN_comp...)) ⋅ fs.ssp.Jinv[cell]
+    return Tensor{2,dim,T}((dN_comp...,)) ⋅ fs.ssp.Jinv[cell]
 end
 
 function shape_divergence(fs::AbstractVectorFunctionSpace{dim,T}, q_point::Int, base_func::Int, cell::Int)  where {dim,T}
     @assert 1 <= base_func <= fs.n_dof "invalid base function index: $base_func"
-    return trace(shape_gradient(fs, q_point, base_func, cell))
+    return tr(shape_gradient(fs, q_point, base_func, cell))
 end
 
 #Face Data

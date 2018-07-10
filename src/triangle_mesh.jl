@@ -115,7 +115,7 @@ function parse_mesh_triangle(root_file)
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_ref, root_file)
-    faces = Matrix{Int}(length(faces_ref),4)
+    faces = Matrix{Int}(undef,length(faces_ref),4)
     parse_cells!(cells, faces, faces_ref,facesets,nodes, root_file)
     PolygonalMesh{2,3,3,2,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end

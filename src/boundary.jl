@@ -70,7 +70,7 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
             @assert getcell(2,face_idx,dh.mesh) == 0 "Face $face_idx is not in boundary"
             cell_idx = getcell(1,face_idx,dh.mesh)
             cell = dh.mesh.cells[cell_idx]
-            face_lidx::Int = find(x -> x == face_idx,cell.faces)[1]
+            face_lidx::Int = findall(x -> x == face_idx,cell.faces)[1]
             l_dof = Int[]
             offset::Int = dh.cell_dofs_offset[cell_idx] - 1 + field_offset(dh, field)
             for j = 1:2 #Add vertex dofs

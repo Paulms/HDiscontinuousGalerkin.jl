@@ -19,7 +19,7 @@ function GenericFiniteElement(func_basis::Interpolation{dim,shape,qorder},
     geom_topology = gettopology(geom_basis)
     n_geom_basefuncs = getnbasefunctions(geom_basis)
     if gorder == 1
-        M = one(Matrix{Float64}(n_geom_basefuncs,n_geom_basefuncs))
+        M = one(Matrix{Float64}(undef,n_geom_basefuncs,n_geom_basefuncs))
     else
         M = _nodal_geom_data(geom_basis)
     end

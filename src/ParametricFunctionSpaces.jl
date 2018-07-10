@@ -165,5 +165,5 @@ function shape_gradient(fs::ParametricVectorFunctionSpace{dim,T}, q_point::Int, 
     dN_comp = zeros(T, dim, dim)
     n = size(fs.ssp.N,1)
     dN_comp[div(base_func,n+1)+1, :] = fs.ssp.dNdξ[mod1(base_func,n), q_point]
-    return Tensor{2,dim,T}((dN_comp...)) ⋅ fs.ssp.Jinv[cell,q_point]
+    return Tensor{2,dim,T}((dN_comp...,)) ⋅ fs.ssp.Jinv[cell,q_point]
 end
