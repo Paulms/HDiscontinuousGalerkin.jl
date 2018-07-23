@@ -1,3 +1,5 @@
+@testset "Test CG poisson example" begin
+
 using HDiscontinuousGalerkin
 using Tensors
 using SparseArrays
@@ -86,3 +88,5 @@ reconstruct!(u_h, u, dh)
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex)
 @test Etu_h <= 0.0002
+
+end

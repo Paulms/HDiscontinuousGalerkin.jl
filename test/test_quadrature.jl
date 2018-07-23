@@ -1,3 +1,5 @@
+@testset "Test quadrature rules" begin
+
 using HDiscontinuousGalerkin
 
 # Test GrundmannMoeller Quadrature
@@ -12,12 +14,14 @@ quad_rule = QuadratureRule{2,RefTetrahedron}(GrundmannMoeller(),1)
 @test getpoints(quad_rule)[4] ≈ [1//3,1//3]
 
 for i in 0:5
-    global quad_rule = QuadratureRule{2,RefTetrahedron}(GrundmannMoeller(),i)
+    quad_rule = QuadratureRule{2,RefTetrahedron}(GrundmannMoeller(),i)
     @test sum(getweights(quad_rule)) ≈ 0.5
 end
 
 # Test Strang Quadrature
 for i in 1:5
-    global quad_rule = QuadratureRule{2,RefTetrahedron}(Strang(),i)
+    quad_rule = QuadratureRule{2,RefTetrahedron}(Strang(),i)
     @test sum(getweights(quad_rule)) ≈ 0.5
+end
+
 end

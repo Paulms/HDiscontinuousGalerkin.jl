@@ -1,3 +1,5 @@
+@testset "Test HDG Example" begin
+
 # Test using Poisson problem
 # -Δu = f  in Ω
 #   u = 0  on Γ = ∂Ω
@@ -37,8 +39,8 @@ end
 @test Wh.Jinv[3,1] ≈ Tensor{2,2}([1.0 1.0;-1.0 1.0])
 @test Wh.Jinv[4,1] ≈ Tensor{2,2}([1.0 -1.0;0.0 2.0])
 
-const sq2 = sqrt(2)
-const sq3 = sqrt(3)
+sq2 = sqrt(2)
+sq3 = sqrt(3)
 @test Whf.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
 @test Whf.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
 @test Whf.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
@@ -247,3 +249,5 @@ get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex)
 @test Etu_h <= 0.12
+
+end

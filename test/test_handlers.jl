@@ -1,3 +1,5 @@
+@testset "Test handlers" begin
+
 using HDiscontinuousGalerkin
 using Tensors
 
@@ -15,3 +17,5 @@ dh = DofHandler([u_h],mesh)
 # ### Boundary conditions
 dbc = Dirichlet(u_h, dh, "boundary", x -> 0)
 @test dbc.prescribed_dofs == [1,2,3,5,6,7,8,9]
+
+end

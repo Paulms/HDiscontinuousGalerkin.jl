@@ -1,6 +1,8 @@
+@testset "Test Finite Elements" begin
+
 using HDiscontinuousGalerkin
 using Tensors
-const HDG = HDiscontinuousGalerkin
+HDG = HDiscontinuousGalerkin
 
 # Test ContinuousLagrange Element
 finiteElement = ContinuousLagrange{2,RefTetrahedron,2}()
@@ -48,4 +50,6 @@ finiteElement = ContinuousLagrange{1,RefTetrahedron,1}()
 for j = 1:2
     @test abs(ref_value1(j,ξ_ref) - value(finiteElement,j,ξ_ref)) < eps(Float64)
     @test norm(gradient(ξ -> ref_value1(j, ξ), ξ_ref) - gradient_value(finiteElement,j,ξ_ref), Inf) < eps(Float64)
+end
+
 end
