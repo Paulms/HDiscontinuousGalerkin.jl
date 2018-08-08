@@ -124,7 +124,7 @@ function cell_diameter(mesh::PolygonalMesh{dim,N,M,NN,T}, idx::Int) where {dim,N
 end
 
 _check_setname(dict, name) = haskey(dict, name) && throw(ArgumentError("there already exists a set with the name: $name"))
-_warn_emptyset(set) = length(set) == 0 && warn("no entities added to set")
+_warn_emptyset(set) = length(set) == 0 && @warn("no entities added to set")
 
 function addfaceset!(mesh::PolygonalMesh, name::String, faceid::Set{Int})
     _check_setname(mesh.facesets, name)

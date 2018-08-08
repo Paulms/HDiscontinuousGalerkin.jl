@@ -23,11 +23,7 @@ function get_affine_map(x, ξ)
     return reshape(X[1:n*n], (n, n)), X[n*n+1:end]
 end
 
-@static if VERSION < v"0.7.0-DEV.2563"
-    const ht_keyindex2! = Base.ht_keyindex2
-else
-    import Base.ht_keyindex2!
-end
+import Base.ht_keyindex2!
 
 mutable struct ScalarWrapper{T}
     x::T
