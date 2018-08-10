@@ -13,6 +13,8 @@ Return the polynomial order of the `Interpolation`
 """
 @inline getorder(ip::Interpolation{dim,shape,order}) where {dim,shape,order} = order
 
+@inline gettopology(ip::Interpolation) = Dict{Int,Int}()
+
 """
 Compute the value of the shape functions at a point ξ for a given interpolation
 """
@@ -249,6 +251,16 @@ function getdafaultdualbasis(dim::Int,shape,order::Int)
     end
 end
 
+function defaultDualBasis(dim::Int,shape,order::Int)
+    if dim == 1
+        return Legendre{1,shape,order}()
+    elseif dim == 2
+        return Dubiner{2,shape,order}()
+    else
+        throw("Not dual basis available for dimension $dim")
+    end
+end
+
 function Lagrange{dim,shape,order}() where {dim,shape, order}
     nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
     nodals=[x->x(point) for point in nodal_points]
@@ -262,7 +274,7 @@ end
 
 @inline getnbasefunctions(::Lagrange{1,RefTetrahedron,order}) where {order} = order + 1
 @inline getnbasefunctions(::Lagrange{2,RefTetrahedron,order}) where {order} = Int((order+1)*(order+2)/2)
-@inline get_topology(ip::Lagrange{dim,RefTetrahedron,order}) where {dim,order} = ip.topology
+@inline gettopology(ip::Lagrange{dim,RefTetrahedron,order}) where {dim,order} = ip.topology
 
 """
 return interpolator of the same type with dim = dim -1
@@ -293,12 +305,6 @@ on the reference triangle ((0,0),(1,0),(0,1))
 """
 function gradient_value(ip::Lagrange{dim,RefTetrahedron,order}, k::Int, ξ::Vec{dim,T}) where {dim,order,T}
     if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
-    # a = nodal_basis_coefs[1,k]*gradient_value(interpolation, 1, ξ)
-    # n = getnbasefunctions(ip)
-    # for j in 2:n
-    #     a += nodal_basis_coefs[j,k]*gradient_value(interpolation, j, ξ)
-    # end
-    # return a
     gradient(ξ -> value(ip, k, ξ), ξ)
 end
 
@@ -354,16 +360,5 @@ on the reference line (0,1)
 """
 function gradient_value(ip::Legendre{1,RefTetrahedron,order}, k::Int, ξ::Vec{1,T}) where {order, T}
     if k >getnbasefunctions(ip);throw(ArgumentError("no shape function $k for interpolation $ip"));end
-    # a = 0; b = 1;
-    # if k==0
-    #     return a
-    # elseif k==1
-    #     return b
-    # else
-    #     for n=2:k
-    #         J =((n+1)/2)* jacobi(ξ,k-1,1,1) ;
-    #     end
-    # end
-    # return 2*sqrt(2*k+1)*J
     gradient(ξ -> value(ip, k, ξ), ξ)
 end

@@ -85,7 +85,7 @@ function rectangle_mesh(::Type{RefTetrahedron}, ::Type{Val{2}}, nel::NTuple{2,In
     nodes = Node{2,T}[]
     _generate_2d_nodes!(nodes, n_nodes_x, n_nodes_y, LL, LR, UR, UL)
 
-    faces = Matrix{Int}(nel[1]+nel[2]+3*nel[1]*nel[2],4)
+    faces = Matrix{Int}(undef,nel[1]+nel[2]+3*nel[1]*nel[2],4)
 
     # Generate cells
     node_array = reshape(collect(1:n_nodes), (n_nodes_x, n_nodes_y))

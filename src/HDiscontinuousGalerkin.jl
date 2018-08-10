@@ -1,16 +1,17 @@
-__precompile__()
-
 module HDiscontinuousGalerkin
 
 using Tensors
 using FastGaussQuadrature
+using SparseArrays
+using LinearAlgebra
+
 import Base:@propagate_inbounds
 
 abstract type AbstractRefShape end
 abstract type AbstractQuadratureRule end
 
 abstract type Interpolation{dim,shape,order} end
-abstract type DiscreteFunctionSpace{dim,T,refshape} end
+abstract type DiscreteFunctionSpace{dim,T,FE} end
 
 include("utils.jl")
 include("shapes.jl")
@@ -18,10 +19,15 @@ include("mesh.jl")
 include("generate_mesh.jl")
 include("triangle_mesh.jl")
 include("basis.jl")
+include("FiniteElement.jl")
+include("LagrangeFE.jl")
 include("quadrature.jl")
 include("GrundmannMoellerQuad.jl")
 include("StrangQuad.jl")
-include("FunctionSpace.jl")
+include("ScalarFunctionSpaces.jl")
+include("VectorFunctionSpaces.jl")
+include("TraceFunctionSpaces.jl")
+include("ParametricFunctionSpaces.jl")
 include("assembler.jl")
 include("DiscreteFunctions.jl")
 include("dofhandler.jl")
@@ -62,7 +68,10 @@ export value, derivative, gradient_value
 export getnbasefunctions
 export get_default_geom_interpolator
 export getorder, getlowerdiminterpol
-export get_topology, get_interpolation
+export gettopology, get_interpolation
+
+# finite Elements
+export ContinuousLagrange, GenericFiniteElement
 
 #utils
 export get_affine_map
@@ -76,13 +85,13 @@ export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
 export getnfacequadpoints, getdetJdS
 export face_shape_value
-export InterpolatedFunction, function_value, interpolate
 export spatial_coordinate, reference_coordinate
 export getnlocaldofs
 
 #Discrete Functions
 export TrialFunction
 export errornorm
+export InterpolatedFunction, function_value, interpolate
 
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!

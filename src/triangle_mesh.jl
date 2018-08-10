@@ -1,6 +1,6 @@
 # Read mesh from a triangle generated file
 function read_line(ln, types)
-    m2 = matchall(r"\b((\d*\.)?\d+)\b", ln)
+    m2 = collect((m.match for m = eachmatch(r"\b((\d*\.)?\d+)\b", ln, overlap=false)))
     return (parse(types[i],x) for (i,x) in enumerate(m2))
 end
 
@@ -115,7 +115,7 @@ function parse_mesh_triangle(root_file)
     facesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_ref, root_file)
-    faces = Matrix{Int}(length(faces_ref),4)
+    faces = Matrix{Int}(undef,length(faces_ref),4)
     parse_cells!(cells, faces, faces_ref,facesets,nodes, root_file)
     PolygonalMesh{2,3,3,2,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
 end

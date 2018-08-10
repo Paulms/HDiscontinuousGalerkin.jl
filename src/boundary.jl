@@ -13,8 +13,8 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
     n_dof = getnbasefunctions(fs)
     n_qpoints = getnquadpoints(fs)
     n_faces = length(faceset)
-    prescribed_dofs = Vector{Int}(n_faces*n_dof)
-    values = Vector{T}(n_faces*n_dof)
+    prescribed_dofs = Vector{Int}(undef, n_faces*n_dof)
+    values = Vector{T}(undef, n_faces*n_dof)
     k = 0
     for face_idx in 1:getnfaces(mesh)
         let face_idx::Int = face_idx
@@ -22,7 +22,7 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
             @assert getcell(2,face_idx,mesh) == 0 "Face $face_idx is not in boundary"
             cell_idx = getcell(1,face_idx,mesh)
             cell = mesh.cells[cell_idx]
-            face_lidx = find(x -> x == face_idx,cell.faces)[1]
+            face_lidx = findall(x -> x == face_idx,cell.faces)[1]
             orientation = face_orientation(mesh, cell_idx, face_lidx)
             N = zero(T)
             coords = get_coordinates(cell, mesh)
@@ -42,21 +42,21 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
 end
 
 function Dirichlet(u::TrialFunction, dh::DofHandler, faceset::String,f::Union{Function,Vector})
-    Dirichlet(u, dh, get_faceset(dh.mesh, faceset), getfunctionspace(u), get_interpolation(getfunctionspace(u)), f)
+    Dirichlet(u, dh, get_faceset(dh.mesh, faceset), getfunctionspace(u), getfiniteelement(getfunctionspace(u)), f)
 end
 
 #TODO: only works for nodal basis
-function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::Set{Int}, fs::DiscreteFunctionSpace, interp::Interpolation, f::Union{Function,Vector{T}}) where {T,refshape}
+function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::Set{Int}, fs::DiscreteFunctionSpace, felem::FiniteElement, f::Union{Function,Vector{T}}) where {T,refshape}
     fi = find_field(dh, field)
     #compute total number of dofs
     n_qpoints = getnquadpoints(fs)
-    n_max_topology_elements = maximum(keys(get_topology(refshape, Val{2})))
+    n_max_topology_elements = maximum(keys(gettopology(refshape, Val{2})))
     nelementdofs = Int[]
     ncellelementdofs = Int[]
     # Compute dofs for element and total element dofs for cell
     for n_element in 0:n_max_topology_elements-1
-        n_el_dofs_cell = get_topology(interp)[n_element]
-        n_el_cell = get_topology(getrefshape(field), Val{2})[n_element]
+        n_el_dofs_cell = gettopology(felem)[n_element]
+        n_el_cell = gettopology(refshape, Val{2})[n_element]
         @assert mod(n_el_dofs_cell, n_el_cell) == 0
         push!(nelementdofs,Int(n_el_dofs_cell/n_el_cell))
         push!(ncellelementdofs,n_el_dofs_cell)
@@ -64,14 +64,13 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
 
     prescribed_dofs = Vector{Int}()
     values = Vector{T}()
-    M = _get_nodal_transformation_matrix(interp)
     for face_idx in 1:getnfaces(dh.mesh)
         let face_idx::Int = face_idx
         if face_idx ∈ faceset
             @assert getcell(2,face_idx,dh.mesh) == 0 "Face $face_idx is not in boundary"
             cell_idx = getcell(1,face_idx,dh.mesh)
             cell = dh.mesh.cells[cell_idx]
-            face_lidx::Int = find(x -> x == face_idx,cell.faces)[1]
+            face_lidx::Int = findall(x -> x == face_idx,cell.faces)[1]
             l_dof = Int[]
             offset::Int = dh.cell_dofs_offset[cell_idx] - 1 + field_offset(dh, field)
             for j = 1:2 #Add vertex dofs
@@ -88,7 +87,7 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
                     push!(l_dof, local_offset)
                 end
             end
-            _push_values!(values, cell, dh.mesh, l_dof, fs, interp, M, field, f)
+            _push_values!(values, cell, dh.mesh, l_dof, felem, field, f)
         end
         end
     end
@@ -97,18 +96,18 @@ function Dirichlet(field::TrialFunction{2,T,refshape}, dh::DofHandler, faceset::
     return Dirichlet(prescribed_dofs[p], values[p])
 end
 
-function _push_values!(values::Vector, cell::Cell, mesh::PolygonalMesh,l_dof::Vector{Int}, fs::DiscreteFunctionSpace, interp::Interpolation, M::Matrix, field::TrialFunction, f::Function)
+function _push_values!(values::Vector, cell::Cell, mesh::PolygonalMesh,l_dof::Vector{Int}, felem::FiniteElement, field::TrialFunction, f::Function)
     #TODO: We now assume a nodal base...
     coords = get_coordinates(cell, mesh)
     for i in l_dof
-        vals = f(spatial_nodal_coordinate(interp,M,i,coords))
+        vals = f(spatial_nodal_coordinate(felem,i,coords))
         for k in 1:getncomponents(field)
             push!(values,vals[k])
         end
     end
 end
 
-function _push_values!(values::Vector, cell::Cell, mesh::PolygonalMesh,l_dof::Vector{Int}, fs::DiscreteFunctionSpace, interp::Interpolation, M::Matrix, field::TrialFunction, vals::Vector{T}) where {T}
+function _push_values!(values::Vector, cell::Cell, mesh::PolygonalMesh,l_dof::Vector{Int}, felem::FiniteElement, field::TrialFunction, vals::Vector{T}) where {T}
     #TODO: We now assume a nodal base...
     for i in l_dof
         for k in 1:getncomponents(field)
@@ -163,7 +162,7 @@ function zero_out_columns!(K, dofs::Vector{Int}) # can be removed in 0.7 with #2
     #@debug assert(issorted(dofs))
     for col in dofs
         r = nzrange(K, col)
-        K.nzval[r] = 0.0
+        K.nzval[r] .= 0.0
     end
 end
 

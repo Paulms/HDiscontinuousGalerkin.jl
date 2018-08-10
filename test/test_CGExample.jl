@@ -1,10 +1,14 @@
+@testset "Test CG poisson example" begin
+
 using HDiscontinuousGalerkin
 using Tensors
+using SparseArrays
+
 mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
 
 # Declare variables
 u_h = TrialFunction(Wh)
@@ -29,7 +33,7 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     Ke = zeros(n_basefuncs, n_basefuncs)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
-    cell_dofs = Vector{Int}(ndofs_per_cell(dh))
+    cell_dofs = Vector{Int}(undef, ndofs_per_cell(dh))
     assembler = start_assemble(K, b)
 
     # Next we define the global force vector `f` and
@@ -84,3 +88,5 @@ reconstruct!(u_h, u, dh)
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex)
 @test Etu_h <= 0.0002
+
+end

@@ -26,6 +26,7 @@
 using HDiscontinuousGalerkin
 using Tensors
 using BlockArrays
+using LinearAlgebra
 
 # Load mesh
 #To load mesh from triangle
@@ -37,17 +38,18 @@ mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
+finiteElement = GenericFiniteElement(Dubiner{dim,RefTetrahedron,1}())
+Wh, Whf = ScalarFunctionSpace(mesh, finiteElement)
+Vh, Vhf = VectorFunctionSpace(mesh, finiteElement)
+Mh = ScalarTraceFunctionSpace(mesh, Whf, GenericFiniteElement(Legendre{dim-1,RefTetrahedron,1}()))
 
 # Declare variables
-@time û_h = TrialFunction(Mh)
+û_h = TrialFunction(Mh)
 σ_h = TrialFunction(Vh)
 u_h = TrialFunction(Wh)
 
 # ### Boundary conditions
-@time dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
+dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
 
 # RHS function
 f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
@@ -68,13 +70,13 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
 
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(undef, getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0.0)
     ff = interpolate(f, Wh)
 
     # Preallocate vectors to store data for u and σ recovery
-    K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
-    b_element = Array{AbstractVector{Float64}}(getncells(mesh))
+    K_element = Array{AbstractMatrix{Float64}}(undef, getncells(mesh))
+    b_element = Array{AbstractVector{Float64}}(undef, getncells(mesh))
 
     for cell_idx in 1:getncells(mesh)
         fill!(Ae, 0)
@@ -114,17 +116,17 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
         end
         #Face integrals
         for face_idx in 1:getnfaces(mesh.cells[cell_idx])
-            for q_point in 1:getnfacequadpoints(Wh)
-                dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
+            for q_point in 1:getnfacequadpoints(Whf)
+                dS = getdetJdS(Whf, cell_idx, face_idx, q_point)
                 orientation = face_orientation(mesh, cell_idx, face_idx)
                 for i in 1:n_basefuncs_s
-                    w = face_shape_value(Wh, face_idx, q_point, i)
+                    w = shape_value(Whf, face_idx, q_point, i)
                     for j in 1:n_basefuncs_s
-                        u = face_shape_value(Wh, face_idx, q_point, j)
+                        u = shape_value(Whf, face_idx, q_point, j)
                         # Integral_∂T τ*u ⋅ w dS
                         Ce[i,j] += τ*(u*w) * dS
                     end
-                    w = face_shape_value(Wh, face_idx, q_point, i, orientation)
+                    w = shape_value(Whf, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T τ*û*w  dS
@@ -132,9 +134,9 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
                     end
                 end
                 dS = getdetJdS(Mh, cell_idx, face_idx, q_point)
-                n = get_normal(Vh, cell_idx, face_idx)
+                n = get_normal(Vhf, cell_idx, face_idx)
                 for i in 1:n_basefuncs
-                    v = face_shape_value(Vh, face_idx, q_point, i, orientation)
+                    v = shape_value(Vhf, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T û(v⋅n)  dS
@@ -204,18 +206,18 @@ end
 #md nothing # hide
 
 ### Solution of the system
-@time K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
+K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
 
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-@time apply!(K,b,dbc)
+apply!(K,b,dbc)
 #using IterativeSolvers
 #û = gmres(K,b)
 û = K \ b;
 
 #Now we recover original variables from skeleton û
-@time get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
+get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex)
@@ -232,7 +234,7 @@ PyPlot.triplot(triang, "ko-")
 
 #Plot avg(u_h)
 # We need avg since u_h is discontinuous
-nodalu_h = Vector{Float64}(length(mesh.nodes))
+nodalu_h = Vector{Float64}(undef, length(mesh.nodes))
 share_count = zeros(Int,length(mesh.nodes))
 fill!(nodalu_h,0)
 for (k,cell) in enumerate(mesh.cells)
@@ -244,9 +246,6 @@ for (k,cell) in enumerate(mesh.cells)
 end
 nodalu_h = nodalu_h./share_count
 PyPlot.tricontourf(triang, nodalu_h)
-
-
-
 
 # ### Exporting to VTK
 # To visualize the result we export the grid and our field `u`

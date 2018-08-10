@@ -30,7 +30,7 @@ function (::Type{QuadratureRule{1,RefTetrahedron}})(quad_type::GaussLegendre, or
     points, weights = gausslegendre(order)
     # Shift interval from (-1,1) to (0,1)
     weights *= 0.5
-    points += 1.0; points /= 2.0
+    points = points .+ 1.0; points /= 2.0
     return QuadratureRule{1,RefTetrahedron,Float64}(weights, [Tensor{1,1}([x]) for x in points])
 end
 
@@ -42,6 +42,14 @@ end
 Face Quadrature Rules
 """
 function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}, itp::Interpolation{2,shape}) where {T,shape}
+    w = getweights(quad_rule)
+    p = getpoints(quad_rule)
+    geom_face_interpol = get_default_geom_interpolator(shape, Val{1})
+    face_quad_rule = QuadratureRule{2,shape,T}[]
+    _populate_face_quad_rule!(face_quad_rule, geom_face_interpol, p, w)
+end
+
+function create_face_quad_rule(quad_rule::QuadratureRule{1,shape,T}) where {T,shape}
     w = getweights(quad_rule)
     p = getpoints(quad_rule)
     geom_face_interpol = get_default_geom_interpolator(shape, Val{1})

@@ -1,9 +1,11 @@
+@testset "Test handlers" begin
+
 using HDiscontinuousGalerkin
 using Tensors
 
 mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
 u_h = TrialFunction(Wh)
 
 dh = DofHandler([u_h],mesh)
@@ -15,3 +17,5 @@ dh = DofHandler([u_h],mesh)
 # ### Boundary conditions
 dbc = Dirichlet(u_h, dh, "boundary", x -> 0)
 @test dbc.prescribed_dofs == [1,2,3,5,6,7,8,9]
+
+end

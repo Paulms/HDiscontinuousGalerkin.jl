@@ -30,11 +30,11 @@ using Tensors
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
-mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
+mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)));
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, Lagrange{dim,RefTetrahedron,1}())
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
 
 # Declare variables
 u_h = TrialFunction(Wh)
@@ -45,7 +45,7 @@ u_h = TrialFunction(Wh)
 # We create the `DofHandler` and then add a single field called `u`.
 # Lastly we `close!` the `DofHandler`, it is now that the dofs are distributed
 # for all the elements.
-dh = DofHandler([u_h], mesh)
+dh = DofHandler([u_h], mesh);
 
 # Now that we have distributed all our dofs we can create our tangent matrix,
 # using `create_sparsity_pattern`. This function returns a sparse matrix
@@ -56,7 +56,7 @@ K = create_sparsity_pattern(dh);
 # By default the stored values are set to $0$, so we first need to
 # fill the stored values, e.g. `K.nzval` with something meaningful.
 using UnicodePlots
-fill!(K.nzval, 1.0)
+fill!(K.nzval, 1.0);
 spy(K; height = 15)
 
 # ### Boundary conditions
@@ -76,12 +76,12 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
     cell_dofs = Vector{Int}(ndofs_per_cell(dh))
-    assembler = start_assemble(K, b)
 
     # Next we define the global force vector `f` and
     # create an assembler. The assembler
     # is just a thin wrapper around `f` and `K` and some extra storage
     # to make the assembling faster.
+    assembler = start_assemble(K, b)
     ff = interpolate(f, Wh)
 
     # It is now time to loop over all the cells in our grid.
@@ -127,7 +127,7 @@ K, b = doassemble(Wh, K, dh);
 # To account for the boundary conditions we use the `apply!` function.
 # This modifies elements in `K` and `f` respectively, such that
 # we can get the correct solution vector `u` by using `\`.
-apply!(K,b,dbc)
+apply!(K,b,dbc);
 u = K \ b;
 
 # reconstruct!(u_h, u, dh)

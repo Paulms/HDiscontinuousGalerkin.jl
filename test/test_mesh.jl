@@ -1,3 +1,5 @@
+@testset "Test mesh reader" begin
+
 using HDiscontinuousGalerkin
 using Tensors
 
@@ -40,3 +42,5 @@ end
 @test cell_diameter(mesh,1) == sqrt(2)/2
 @test get_faceset(mesh, "boundary") == Set([3,7,9,16,2,11,12,15])
 @test getnfaces(mesh.cells[1]) == 3
+
+end

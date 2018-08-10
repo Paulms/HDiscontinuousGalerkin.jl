@@ -1,3 +1,5 @@
+@testset "Test HDG Example" begin
+
 # Test using Poisson problem
 # -Δu = f  in Ω
 #   u = 0  on Γ = ∂Ω
@@ -6,6 +8,7 @@
 using HDiscontinuousGalerkin
 using Tensors
 using BlockArrays
+using LinearAlgebra
 
 # Load mesh
 root_file = "mesh/figure2.1"
@@ -13,9 +16,10 @@ mesh = parse_mesh_triangle(root_file)
 
 # ### Trial and test functions
 dim = 2
-Vh = VectorFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Wh = ScalarFunctionSpace(mesh, Dubiner{dim,RefTetrahedron,1}())
-Mh = ScalarTraceFunctionSpace(Wh, Legendre{dim-1,RefTetrahedron,1}())
+finiteElement = GenericFiniteElement(Dubiner{dim,RefTetrahedron,1}())
+Wh, Whf = ScalarFunctionSpace(mesh, finiteElement)
+Vh, Vhf = VectorFunctionSpace(mesh, finiteElement)
+Mh = ScalarTraceFunctionSpace(mesh, Whf, GenericFiniteElement(Legendre{dim-1,RefTetrahedron,1}()))
 
 # Variables
 û_h = TrialFunction(Mh)
@@ -35,14 +39,14 @@ end
 @test Wh.Jinv[3,1] ≈ Tensor{2,2}([1.0 1.0;-1.0 1.0])
 @test Wh.Jinv[4,1] ≈ Tensor{2,2}([1.0 -1.0;0.0 2.0])
 
-const sq2 = sqrt(2)
-const sq3 = sqrt(3)
-@test Wh.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
-@test Wh.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
-@test Wh.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
-@test Wh.normals[1,:,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
+sq2 = sqrt(2)
+sq3 = sqrt(3)
+@test Whf.E[1,:] ≈ [[sq2, sq2, sq2],[sq2, sq2,sq2]]
+@test Whf.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
+@test Whf.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
+@test Whf.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
+@test Whf.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
+@test Whf.normals[1,:,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
 
 # ### Boundary conditions
 dbc = Dirichlet(û_h, mesh, "boundary", x -> 0)
@@ -52,17 +56,17 @@ f(x::Vec{dim}) = 2*π^2*sin(π*x[1])*sin(π*x[2])
 ff = interpolate(f, Wh)
 @test errornorm(ff,f) <= eps(Float64)
 
-Be_ex=Vector{Matrix{Float64}}(4)
+Be_ex=Vector{Matrix{Float64}}(undef, 4)
 Be_ex[1] = [0 0 0; 0 0 0; -3*sq2 0 0; 0.0 0 0; sqrt(6) 0 0; 0 0 0]
 Be_ex[2] = [0 0 0; 0 0 0; 3*sq2 0 0; 0.0 0 0; -sqrt(6) 0 0; 0 0 0]
 Be_ex[3] = [0 0 0; sqrt(6)/2 0 0; -3/2*sq2 0 0; 0 0 0; 3/2*sqrt(6) 0 0; 3/2*sq2 0 0]
 Be_ex[4] = [0 0 0; sqrt(6) 0 0; 0 0 0; 0.0 0 0; 0 0 0; 3*sq2 0 0]
-Ce_ex=Vector{Matrix{Float64}}(4)
+Ce_ex=Vector{Matrix{Float64}}(undef, 4)
 Ce_ex[1] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Ce_ex[2] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
 Ce_ex[3] = [2*sq2+2 sqrt(6)-sqrt(3) sq2-1; sqrt(6)-sqrt(3)  4*sq2+4 0; sq2-1 0 4*sq2+4]
 Ce_ex[4] = [2*sq2+2 0 2-2*sq2; 0 4*sq2+4 0; 2-2*sq2 0 4*sq2+4]
-Ee_ex=Vector{Matrix{Float64}}(4)
+Ee_ex=Vector{Matrix{Float64}}(undef, 4)
 Ee_ex[1] = -[sq2/2 0 sq2/2 0 -sq2 0; sq3/2 -1/2 -sq3/2 1/2 0 -2; 1/2 sq3/2 1/2 sq3/2 2 0;
            -sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2  1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0]
 Ee_ex[2] = -[-sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2 -1/2 0 -2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0;
@@ -71,7 +75,7 @@ Ee_ex[3] = -[0 0 sq2/2 0 -sq2/2 0; 0 0 -sq3/2  -1/2 0 1; 0 0 1/2 -sq3/2 1 0;
             -sq2 0 sq2/2 0 sq2/2 0; -sq3 1 -sq3/2 -1/2 0 -1; -1 -sq3 1/2 -sq3/2 -1 0]
 Ee_ex[4] = -[-sq2/2 0 sq2/2 0 0 0; -sq3/2 1/2 -sq3/2 1/2 0 0; -1/2 -sq3/2 1/2 sq3/2 0 0;
            -sq2/2 0 -sq2/2 0 sq2 0; -sq3/2 1/2 sq3/2  -1/2 0 2; -1/2 -sq3/2 -1/2 -sq3/2 -2 0]
-He_ex=Vector{Matrix{Float64}}(4)
+He_ex=Vector{Matrix{Float64}}(undef, 4)
 He_ex[1] = [sq2/2 0 0 0 0 0 ;0 sq2/2 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1]
 He_ex[3] = [1 0 0 0 0 0 ;0 1 0 0 0 0;0 0 sq2/2 0 0 0;0 0 0 sq2/2 0 0; 0 0 0 0 sq2/2 0; 0 0 0 0 0 sq2/2]
 He_ex[2] = He_ex[1]
@@ -95,10 +99,10 @@ function doassemble(Vh, Wh, Mh, τ = 1)
 
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(getnfaces(mesh)*n_basefuncs_t)
+    rhs = Array{Float64}(undef, getnfaces(mesh)*n_basefuncs_t)
     fill!(rhs,0)
-    K_element = Array{AbstractMatrix{Float64}}(getncells(mesh))
-    b_element = Array{AbstractVector{Float64}}(getncells(mesh))
+    K_element = Array{AbstractMatrix{Float64}}(undef, getncells(mesh))
+    b_element = Array{AbstractVector{Float64}}(undef, getncells(mesh))
 
     for cell_idx in 1:getncells(mesh)
         fill!(Ae, 0)
@@ -140,17 +144,17 @@ function doassemble(Vh, Wh, Mh, τ = 1)
         end
         #Face integrals
         for face_idx in 1:getnfaces(mesh.cells[cell_idx])
-            for q_point in 1:getnfacequadpoints(Wh)
-                dS = getdetJdS(Wh, cell_idx, face_idx, q_point)
+            for q_point in 1:getnfacequadpoints(Whf)
+                dS = getdetJdS(Whf, cell_idx, face_idx, q_point)
                 orientation = face_orientation(mesh, cell_idx, face_idx)
                 for i in 1:n_basefuncs_s
-                    w = face_shape_value(Wh, face_idx, q_point, i)
+                    w = shape_value(Whf, face_idx, q_point, i)
                     for j in 1:n_basefuncs_s
-                        u = face_shape_value(Wh, face_idx, q_point, j)
+                        u = shape_value(Whf, face_idx, q_point, j)
                         # Integral_∂T τ*u ⋅ w dS
                         Ce[i,j] += τ*(u*w) * dS
                     end
-                    w = face_shape_value(Wh, face_idx, q_point, i, orientation)
+                    w = shape_value(Whf, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T τ*û*w  dS
@@ -158,9 +162,9 @@ function doassemble(Vh, Wh, Mh, τ = 1)
                     end
                 end
                 dS = getdetJdS(Mh, cell_idx, face_idx, q_point)
-                n = get_normal(Vh, cell_idx, face_idx)
+                n = get_normal(Vhf, cell_idx, face_idx)
                 for i in 1:n_basefuncs
-                    v = face_shape_value(Vh, face_idx, q_point, i, orientation)
+                    v = shape_value(Vhf, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T û(v⋅n)  dS
@@ -245,3 +249,5 @@ get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
 Etu_h = errornorm(u_h, u_ex)
 @test Etu_h <= 0.12
+
+end
