@@ -1,4 +1,4 @@
-function QuadratureRule(quad_type::Strang, order::Int) where {2,RefTetrahedron}
+function (::Type{QuadratureRule{2,RefTetrahedron}})(quad_type::Strang, order::Int)
     if order == 0 || order == 1
         points = [Vec{2}([1.0/3.0, 1.0/3.0])]
         weigths = [0.5]

@@ -14,7 +14,7 @@ struct DefaultQuad <: AbstractQuadratureRule end
 struct GaussLegendre <: AbstractQuadratureRule end
 
 # utils
-function QuadratureRule(quad_type::DefaultQuad, order::Int) where {2,RefTetrahedron}
+function (::Type{QuadratureRule{2,RefTetrahedron}})(quad_type::DefaultQuad, order::Int)
     if order <= 6
         return QuadratureRule{2,RefTetrahedron}(Strang(),order)
     elseif order > 6 && isodd(order)
@@ -26,7 +26,7 @@ function QuadratureRule(quad_type::DefaultQuad, order::Int) where {2,RefTetrahed
 end
 
 # Get GaussLegendre weigths and points from FastGaussQuadrature
-function QuadratureRule(quad_type::GaussLegendre, order::Int) where {1,RefTetrahedron}
+function (::Type{QuadratureRule{1,RefTetrahedron}})(quad_type::GaussLegendre, order::Int)
     points, weights = gausslegendre(order)
     # Shift interval from (-1,1) to (0,1)
     weights *= 0.5
@@ -34,7 +34,7 @@ function QuadratureRule(quad_type::GaussLegendre, order::Int) where {1,RefTetrah
     return QuadratureRule{1,RefTetrahedron,Float64}(weights, [Tensor{1,1}([x]) for x in points])
 end
 
-function QuadratureRule(quad_type::DefaultQuad, order::Int) where {1,RefTetrahedron}
+function (::Type{QuadratureRule{1,RefTetrahedron}})(quad_type::DefaultQuad, order::Int)
     return QuadratureRule{1,RefTetrahedron}(GaussLegendre(), order)
 end
 
