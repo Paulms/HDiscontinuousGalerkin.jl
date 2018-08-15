@@ -7,7 +7,7 @@ for dim in (2,3)
     end
 end
 
-function _compute_p_w(s, n, T = Float64)
+function _compute_p_w(s::Int, n::Int, T = Float64)
     d = 2 * s + 1
     k = 0
     nnodes = binomial(n + s + 1, s)
@@ -26,10 +26,10 @@ function _compute_p_w(s, n, T = Float64)
     return points, weights./sum(2*weights)
 end
 
-function _get_all_exponentials(n,k)
-    a = Vector{Int32}(undef, k)
+function _get_all_exponentials(n::Int,k::Int)
+    a = Vector{Int}(undef, k)
     exponentials = Vector{typeof(a)}(undef,binomial(n+2,k-1))
-    t::Int32 = n
+    t::Int = n
     h = 0
     a[1] = n
     a[2:k] .= 0
