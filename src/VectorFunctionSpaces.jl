@@ -51,7 +51,7 @@ function shape_divergence(fs::AbstractVectorFunctionSpace{dim,T}, q_point::Int, 
 end
 
 #Face Data
-function shape_value(fs::AbstractFacesFunctionSpace{dim,fdim,T,comps}, face::Int, q_point::Int, base_func::Int, orientation::Bool=true) where {dim,fdim,T,comps}
+function shape_value(fs::AbstractScalarFunctionSpace{dim,fdim,T,comps}, face::Int, q_point::Int, base_func::Int, orientation::Bool=true) where {dim,fdim,T,comps}
     @assert 1 <= base_func <= size(fs.E,1)*dim "invalid base function index: $base_func"
     N_comp = zeros(T, dim)
     n = size(fs.E,1)

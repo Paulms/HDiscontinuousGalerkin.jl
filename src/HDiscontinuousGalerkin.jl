@@ -27,11 +27,12 @@ include("StrangQuad.jl")
 include("ScalarFunctionSpaces.jl")
 include("VectorFunctionSpaces.jl")
 include("TraceFunctionSpaces.jl")
-include("ParametricFunctionSpaces.jl")
+#include("ParametricFunctionSpaces.jl")
 include("assembler.jl")
 include("DiscreteFunctions.jl")
 include("dofhandler.jl")
 include("boundary.jl")
+include("iterator.jl")
 
 
 # Function exports
@@ -45,6 +46,7 @@ export rectangle_mesh
 export TriangleCell
 export reference_edge_nodes, getnnodes, get_cell_name
 export get_vertices_matrix, get_cells_matrix
+export n_nodes_per_cell, get_cell_coordinates!
 
 # Boundaries
 export Dirichlet
@@ -87,6 +89,7 @@ export getnfacequadpoints, getdetJdS
 export face_shape_value
 export spatial_coordinate, reference_coordinate
 export getnlocaldofs
+export reinit!
 
 #Discrete Functions
 export TrialFunction
@@ -97,5 +100,8 @@ export InterpolatedFunction, function_value, interpolate
 export DofHandler, ndofs, ndofs_per_cell, celldofs!
 export create_sparsity_pattern, reconstruct!
 export dof_range
+
+#ITerator
+export CellIterator
 
 end # module

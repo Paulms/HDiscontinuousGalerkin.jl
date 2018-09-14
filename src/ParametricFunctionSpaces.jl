@@ -1,5 +1,5 @@
 # Scalar Spaces
-struct ParametricFacesFunctionSpace{dim,fdim,T,comps} <: AbstractFacesFunctionSpace{dim,fdim,T,comps}
+struct ParametricScalarFunctionSpace{dim,fdim,T,comps} <: AbstractScalarFunctionSpace{dim,fdim,T,comps}
     L::Array{T,3}
     E :: Matrix{Vector{T}}
     detJf::Array{T,3}
@@ -122,20 +122,20 @@ function _sface_data(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, quad_degree
             end
         end
     end
-    ParametricFacesFunctionSpace{dim,fdim,T,comps}(L, E, detJf, normals, q_ref_faceweights, q_ref_facepoints)
+    ParametricScalarFunctionSpace{dim,fdim,T,comps}(L, E, detJf, normals, q_ref_faceweights, q_ref_facepoints)
 end
 
 #Data
 @inline getdetJdV(fs::ParametricScalarFunctionSpace, cell::Int, q_point::Int) = fs.detJ[cell,q_point]*fs.qr_weights[q_point]
 @inline shape_gradient(fs::ParametricScalarFunctionSpace, q_point::Int, base_func::Int, cell::Int) = fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point]
 @inline shape_divergence(fs::ParametricScalarFunctionSpace, q_point::Int, base_func::Int, cell::Int) = sum(fs.dNdξ[base_func, q_point] ⋅ fs.Jinv[cell,q_point])
-@inline getdetJdS(fs::ParametricFacesFunctionSpace, cell::Int, face::Int, q_point::Int) = fs.detJf[cell,face, q_point]*fs.qr_face_weigths[q_point]
+@inline getdetJdS(fs::ParametricScalarFunctionSpace, cell::Int, face::Int, q_point::Int) = fs.detJf[cell,face, q_point]*fs.qr_face_weigths[q_point]
 """
     getnormal(fs::ScalarFunctionSpace, cell::Int, face::Int, qp::Int)
 Return the normal at the quadrature point `qp` for the face `face` at
 cell `cell` of the `ScalarFunctionSpace` object.
 """
-@inline get_normal(fs::ParametricFacesFunctionSpace, cell::Int, face::Int, qp::Int) = fs.normals[cell, face, qp]
+@inline get_normal(fs::ParametricScalarFunctionSpace, cell::Int, face::Int, qp::Int) = fs.normals[cell, face, qp]
 
 #Vector Space
 # VectorFunctionSpace

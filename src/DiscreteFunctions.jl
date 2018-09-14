@@ -115,8 +115,9 @@ function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, norm_type::String=
         for (k,cell) in enumerate(get_cells(mesh))
             Elu_h = zero(T)
             coords = get_coordinates(cell, mesh)
+            reinit!(u_h.fs, coords)
             for q_point in 1:getnquadpoints(u_h.fs)
-                dΩ = getdetJdV(u_h.fs, k, q_point)
+                dΩ = getdetJdV(u_h.fs, q_point)
                 u = value(u_h, k, q_point)
                 # Integral (u_h - u_ex) dΩ
                 Elu_h += (u-u_ex(spatial_coordinate(u_h.fs, q_point, coords)))^2*dΩ

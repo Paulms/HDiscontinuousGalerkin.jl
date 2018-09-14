@@ -11,7 +11,7 @@ struct ScalarTraceFunctionSpace{dim,T<:Real,fdim,FE<:FiniteElement,N1,N2,N3} <: 
 end
 
 #Constructor
-function ScalarTraceFunctionSpace(mesh::PolygonalMesh, psp::FacesFunctionSpace{dim,fdim,T,1},
+function ScalarTraceFunctionSpace(mesh::PolygonalMesh, psp::ScalarFunctionSpace{dim,fdim,T,1},
     felem::FiniteElement{fdim,shape,order,gorder}) where {dim,fdim,shape,order,gorder,T}
     detJ = psp.detJf
     qr_weights = psp.qr_face_weigths
