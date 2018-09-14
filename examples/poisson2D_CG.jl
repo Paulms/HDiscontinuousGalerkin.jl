@@ -27,6 +27,8 @@
 # ## Commented Program
 using HDiscontinuousGalerkin
 using Tensors
+using SparseArrays
+
 # We start  generating a simple grid with 20x20 quadrilateral elements
 # using `generate_grid`. The generator defaults to the unit square,
 # so we don't need to specify the corners of the domain.
@@ -75,7 +77,7 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     Ke = zeros(n_basefuncs, n_basefuncs)
     fe = zeros(n_basefuncs)
     b = zeros(ndofs(dh))
-    cell_dofs = Vector{Int}(ndofs_per_cell(dh))
+    cell_dofs = Vector{Int}(undef, ndofs_per_cell(dh))
 
     # Next we define the global force vector `f` and
     # create an assembler. The assembler
