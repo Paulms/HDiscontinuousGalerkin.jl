@@ -30,7 +30,7 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
             for i in 1:n_dof
                 k += 1
                 for q_point in 1:n_qpoints
-                    N += fs.qr_weights[q_point]*f(spatial_coordinate(fs, face_lidx, q_point, coords, orientation))*shape_value(fs,q_point,i)
+                    N += fs.fs.qr_weights[q_point]*f(spatial_coordinate(fs, face_lidx, q_point, coords, orientation))*shape_value(fs,q_point,i)
                 end
                 values[k] = N
                 prescribed_dofs[k] = face_idx*n_dof-n_dof + i

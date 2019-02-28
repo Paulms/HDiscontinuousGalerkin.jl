@@ -36,7 +36,7 @@ mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)
 
 # ### Initiate function Spaces
 dim = 2
-Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); face_data = false)
+Wh = ScalarFunctionSpace(mesh, ContinuousLagrange{dim,RefTetrahedron,1}(); update_face_data = false)
 
 # Declare variables
 u_h = TrialFunction(Wh)
@@ -84,37 +84,37 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     # is just a thin wrapper around `f` and `K` and some extra storage
     # to make the assembling faster.
     assembler = start_assemble(K, b)
-    ff = interpolate(f, Wh)
 
     # It is now time to loop over all the cells in our grid.
-    @inbounds for cell_idx in 1:getncells(mesh)
+    @inbounds for (cellcount, cell) in enumerate(CellIterator(mesh))
         # Always remember to reset the element stiffness matrix and
         # force vector since we reuse them for all elements.
         fill!(Ke, 0)
         fill!(fe, 0)
+        reinit!(Wh, cell)
 
         # It is now time to loop over all the quadrature points in the cell and
         # assemble the contribution to `Ke` and `fe`. The integration weight
         # can be queried from `cellvalues` by `getdetJdV`.
         for q_point in 1:getnquadpoints(Wh)
-            dΩ = getdetJdV(Wh, cell_idx, q_point)
-            fh = value(ff, cell_idx, q_point)
+            dΩ = getdetJdV(Wh, q_point)
+            fh = function_value(f, Wh, cell, q_point)
             # For each quadrature point we loop over all the (local) shape functions.
             # We need the value and gradient of the testfunction `v` and also the gradient
             # of the trial function `u`. We get all of these from `cellvalues`.
             for i in 1:n_basefuncs
                 v  = shape_value(Wh, q_point, i)
-                ∇v = shape_gradient(Wh, q_point, i, cell_idx)
+                ∇v = shape_gradient(Wh, q_point, i)
                 fe[i] += fh*v * dΩ
                 for j in 1:n_basefuncs
-                    ∇u = shape_gradient(Wh, q_point, j, cell_idx)
+                    ∇u = shape_gradient(Wh, q_point, j)
                     Ke[i, j] += (∇v ⋅ ∇u) * dΩ
                 end
             end
         end
         # The last step in the element loop is to assemble `Ke` and `fe`
         # into the global `K` and `f` with `assemble!`.
-        celldofs!(cell_dofs, dh, cell_idx)
+        celldofs!(cell_dofs, dh, cell)
         assemble!(assembler, cell_dofs, fe, Ke)
     end
     return K, b
