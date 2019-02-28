@@ -7,26 +7,29 @@ root_file = "mesh/figure2.1"
 mesh = parse_mesh_triangle(root_file)
 
 finiteElement = ContinuousLagrange{2,RefTetrahedron,1}()
-Wh, Whf = ScalarFunctionSpace(mesh, finiteElement)
+Wh = ScalarFunctionSpace(mesh, finiteElement)
 
 # Basic Test
-@test getnlocaldofs(Wh) == 3
-@test sum(Wh.detJ) ≈ 2.0
-for i in 1:4
-    @test getdetJdV(Wh,i,1)/Wh.qr_weights[1] ≈ 0.5
-end
-@test Wh.Jinv[1,1] ≈ Tensor{2,2}([1.0 1.0;-2.0 0.0])
-@test Wh.Jinv[2,1] ≈ Tensor{2,2}([-1.0 -1.0;2.0 0.0])
-@test Wh.Jinv[3,1] ≈ Tensor{2,2}([1.0 1.0;-1.0 1.0])
-@test Wh.Jinv[4,1] ≈ Tensor{2,2}([1.0 -1.0;0.0 2.0])
-
-# Face Data
 sq2 = sqrt(2)
 sq3 = sqrt(3)
-@test Whf.detJf[1,:,1] ≈ [sq2/2,sq2/2,1]
-@test Whf.detJf[2,:,1] ≈ [sq2/2,sq2/2,1]
-@test Whf.detJf[3,:,1] ≈ [1,sq2/2,sq2/2]
-@test Whf.detJf[4,:,1] ≈ [sq2/2,sq2/2,1]
-@test Whf.normals[1,:]≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
-
+invs = (Tensor{2,2}([1.0 1.0;-2.0 0.0]),
+        Tensor{2,2}([-1.0 -1.0;2.0 0.0]),
+        Tensor{2,2}([1.0 1.0;-1.0 1.0]),
+        Tensor{2,2}([1.0 -1.0;0.0 2.0]))
+detsJf = ([sq2/2,sq2/2,1],
+          [sq2/2,sq2/2,1],
+          [1,sq2/2,sq2/2],
+          [sq2/2,sq2/2,1])
+@test getnlocaldofs(Wh) == 3
+@inbounds for (cellcount, cell) in enumerate(CellIterator(mesh))
+    reinit!(Wh, cell)
+    @test Wh.detJ[] ≈ 0.5
+    @test getdetJdV(Wh,1)/Wh.qr_weights[1] ≈ 0.5
+    @test Wh.Jinv[] ≈ invs[cellcount]
+    # Face Data
+    @test Wh.detJf ≈ detsJf[cellcount]
+    if cellcount == 1
+        @test Wh.normals ≈ [Vec{2}([-sq2/2,sq2/2]), Vec{2}([-sq2/2,-sq2/2]), Vec{2}([1.0,0.0])]
+    end
+end
 end

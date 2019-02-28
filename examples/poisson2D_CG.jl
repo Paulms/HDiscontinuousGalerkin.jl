@@ -84,7 +84,6 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
     # is just a thin wrapper around `f` and `K` and some extra storage
     # to make the assembling faster.
     assembler = start_assemble(K, b)
-    ff = interpolate(f, Wh)
 
     # It is now time to loop over all the cells in our grid.
     @inbounds for (cellcount, cell) in enumerate(CellIterator(mesh))
@@ -99,7 +98,7 @@ function doassemble(Wh, K::SparseMatrixCSC, dh::DofHandler)
         # can be queried from `cellvalues` by `getdetJdV`.
         for q_point in 1:getnquadpoints(Wh)
             dΩ = getdetJdV(Wh, q_point)
-            fh = value(ff, cell, q_point)
+            fh = function_value(f, Wh, cell, q_point)
             # For each quadrature point we loop over all the (local) shape functions.
             # We need the value and gradient of the testfunction `v` and also the gradient
             # of the trial function `u`. We get all of these from `cellvalues`.

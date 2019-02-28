@@ -13,6 +13,7 @@ struct ScalarFunctionSpace{dim,T<:Real,FE<:FiniteElement,MM,N1,N2,N3,fdim} <: Ab
     Jinv::ScalarWrapper{Tensor{2,dim,T,MM}}
     update_face_data::Bool
     L::Array{T,3}
+    dLdξ::Array{Vec{dim,T},3}
     E :: Matrix{Vector{T}}
     detJf::Vector{T}
     normals::Vector{Vec{dim,T}}
@@ -93,7 +94,7 @@ function _scalar_fs(::Type{T}, mesh::PolygonalMesh{dim,N1,N2,N3,T}, quad_rule::Q
     MM = Tensors.n_components(Tensors.get_base(typeof(Jinv[])))
 
     ScalarFunctionSpace{dim,T,typeof(felem),MM,N1,N2,N3,fdim}(N, dNdx, dNdξ, detJ,
-    M, dMdξ, getweights(quad_rule), felem, mesh, Jinv,update_face_data, L, E, detJf, normals,
+    M, dMdξ, getweights(quad_rule), felem, mesh, Jinv,update_face_data, L, dLdξ, E, detJf, normals,
     q_ref_faceweights, q_ref_facepoints)
 end
 

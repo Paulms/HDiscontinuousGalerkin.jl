@@ -57,4 +57,4 @@ function reinit!(ci::CellIterator{dim,N}, i::Int) where {dim,N}
 end
 
 @inline reinit!(fs::DiscreteFunctionSpace{dim,T,FE}, ci::CellIterator{dim,N1,N2,N3,T}) where {dim,N1,N2,N3,T,FE} = reinit!(fs, ci.coords)
-value(ifunc::InterpolatedFunction, ci::CellIterator,q_point::Int) = value(ifunc, ci.current_cellid[],q_point)
+function_value(f::Function, fs::DiscreteFunctionSpace{dim,T,FE}, ci::CellIterator,q_point::Int) where {dim,T,FE} = function_value(f,fs, ci.current_cellid[],q_point)

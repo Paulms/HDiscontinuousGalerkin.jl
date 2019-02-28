@@ -1,10 +1,12 @@
-# Interpolated Functions
-struct InterpolatedFunction{dim,T}
-    N::Matrix{T}
-    fs::DiscreteFunctionSpace{dim,T}
+"""
+function function_value(f::Function, fs::ScalarFunctionSpace{dim,T}, cell::Int,q_point::Int) where {dim,T}
+Evaluate function f(x): x ∈ ℝⁿ ↦ ℝ with x given by cell number `cell` and quadrature point with index `qpoint`
+    using fs FunctionSpace data
+"""
+function function_value(f::Function, fs::ScalarFunctionSpace{dim,T}, cell::Int,q_point::Int) where {dim,T}
+    coords = get_cell_coordinates(cell, fs.mesh)
+    return f(spatial_coordinate(fs, q_point, coords))
 end
-
-@inline value(ifunc::InterpolatedFunction, cell::Int,q_point::Int) = ifunc.N[cell, q_point]
 
 """
 function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::AbstractVector{Vec{dim,T}})
@@ -19,25 +21,6 @@ function spatial_coordinate(fs::ScalarFunctionSpace{dim}, q_point::Int, x::Abstr
         vec += geometric_value(fs, q_point, i) * x[i]
     end
     return vec
-end
-
-"""
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}, mesh::PolygonalMesh) where {dim,T}
-Interpolation of scalar functions f(x): x ∈ ℝⁿ ↦ ℝ on Scalar Function Space `fs`
-"""
-function interpolate(f::Function, fs::ScalarFunctionSpace{dim,T}) where {dim,T}
-    mesh = getmesh(fs)
-    n_cells = getncells(mesh)
-    n_qpoints = getnquadpoints(fs)
-    N = fill(zero(T)          * T(NaN), n_cells, n_qpoints)
-    coords = fill(zero(Vec{dim,T}) * T(NaN), n_nodes_per_cell(mesh))
-    for (k,cell) in enumerate(get_cells(mesh))
-        coords = get_coordinates!(coords,cell, mesh)
-        for i in 1:n_qpoints
-            N[k,i] = f(spatial_coordinate(fs, i, coords))
-        end
-    end
-    InterpolatedFunction{dim,T}(N,fs)
 end
 
 # Trial Functions
@@ -118,28 +101,6 @@ function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, norm_type::String=
             reinit!(u_h.fs, coords)
             for q_point in 1:getnquadpoints(u_h.fs)
                 dΩ = getdetJdV(u_h.fs, q_point)
-                u = value(u_h, k, q_point)
-                # Integral (u_h - u_ex) dΩ
-                Elu_h += (u-u_ex(spatial_coordinate(u_h.fs, q_point, coords)))^2*dΩ
-            end
-            Etu_h += Elu_h
-        end
-    else
-        throw("Norm $norm_type not available")
-    end
-    return Etu_h
-end
-
-function errornorm(u_h::InterpolatedFunction{dim,T}, u_ex::Function, norm_type::String="L2") where {dim,T}
-    mesh = getmesh(u_h.fs)
-    Etu_h = zero(T)
-    if norm_type == "L2"
-        n_basefuncs_s = getnbasefunctions(u_h.fs)
-        for (k,cell) in enumerate(get_cells(mesh))
-            Elu_h = zero(T)
-            coords = get_coordinates(cell, mesh)
-            for q_point in 1:getnquadpoints(u_h.fs)
-                dΩ = getdetJdV(u_h.fs, k, q_point)
                 u = value(u_h, k, q_point)
                 # Integral (u_h - u_ex) dΩ
                 Elu_h += (u-u_ex(spatial_coordinate(u_h.fs, q_point, coords)))^2*dΩ

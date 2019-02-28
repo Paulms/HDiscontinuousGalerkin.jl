@@ -87,7 +87,7 @@ end
 end
 
 @inline function get_cell_coordinates(cell_idx::Int, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
-    coords = Vector{Vec{dim,T}}(N)
+    coords = Vector{Vec{dim,T}}(undef, N)
     for (i,j) in enumerate(mesh.cells[cell_idx].nodes)
         coords[i] = mesh.nodes[j].x
     end

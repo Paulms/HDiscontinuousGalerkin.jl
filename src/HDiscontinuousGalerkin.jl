@@ -92,9 +92,10 @@ export getnlocaldofs
 export reinit!
 
 #Discrete Functions
+export function_value
 export TrialFunction
 export errornorm
-export InterpolatedFunction, function_value, interpolate
+export function_value
 
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!
