@@ -95,7 +95,7 @@ function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, norm_type::String=
     Etu_h = zero(T)
     if norm_type == "L2"
         n_basefuncs_s = getnbasefunctions(u_h)
-        for (k,cell) in enumerate(get_cells(mesh))
+        for (k,cell) in enumerate(getcells(mesh))
             Elu_h = zero(T)
             coords = get_coordinates(cell, mesh)
             reinit!(u_h.fs, coords)

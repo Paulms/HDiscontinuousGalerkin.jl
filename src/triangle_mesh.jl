@@ -45,13 +45,14 @@ function parse_faces!(faces_ref,root_file)
     end
 end
 
-function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
+function parse_cells!(cells, faces, faces_ref,facesets,nodesets,nodes, root_file)
     #read cell nodes
     open(root_file*".ele") do f
         first_line = true
         n_el = 0
         n_faces = 0
         boundary_faces = Set{Int}()
+        boundary_nodes = Set{Int}()
         facesdict = Dict{NTuple{2,Int},Int}()
         el_faces = [0,0,0]
         for ln in eachline(f)
@@ -90,6 +91,8 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
                             Base._setindex!(facesdict, n_faces, element, -token)
                             if ref > 0
                                 push!(boundary_faces, n_faces)
+                                push!(boundary_nodes, v1)
+                                push!(boundary_nodes, v2)
                             end
                         end
                     end
@@ -100,6 +103,7 @@ function parse_cells!(cells, faces, faces_ref,facesets, nodes, root_file)
             end
         end
         push!(facesets, "boundary" => boundary_faces)
+        push!(nodesets, "boundary" => boundary_nodes)
     end
 end
 
@@ -113,9 +117,10 @@ function parse_mesh_triangle(root_file)
     faces_ref = Dict{NTuple{2,Int},Int}()
     cells = Vector{TriangleCell}()
     facesets = Dict{String,Set{Int}}()
+    nodesets = Dict{String,Set{Int}}()
     parse_nodes!(nodes,root_file)
     parse_faces!(faces_ref, root_file)
     faces = Matrix{Int}(undef,length(faces_ref),4)
-    parse_cells!(cells, faces, faces_ref,facesets,nodes, root_file)
-    PolygonalMesh{2,3,3,2,eltype(nodes[1].x)}(cells, nodes, faces, facesets)
+    parse_cells!(cells, faces, faces_ref,facesets,nodesets,nodes, root_file)
+    PolygonalMesh{2,3,3,2,eltype(nodes[1].x)}(cells, nodes, faces, facesets,nodesets)
 end

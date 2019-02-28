@@ -38,15 +38,17 @@ include("iterator.jl")
 # Function exports
 # mesh
 export parse_mesh_triangle, cell_diameter, get_coordinates
-export nodes, faces, cells, get_cells, get_faces, get_nodes, node
+export nodes, faces, cells, getcells, get_faces, getnodes, node
 export Cell, Node, PolygonalMesh
 export getncells, getnfaces, n_faces_per_cell, get_normal
-export face_orientation, get_faceset
+export face_orientation, getfaceset
+export getnodeset, getnodesets
 export rectangle_mesh
-export TriangleCell
+export TriangleCell, RectangleCell
 export reference_edge_nodes, getnnodes, get_cell_name
-export get_vertices_matrix, get_cells_matrix
+export get_vertices_matrix, getcells_matrix
 export n_nodes_per_cell, get_cell_coordinates!
+export cell_centroid, cell_volume
 
 # Boundaries
 export Dirichlet
