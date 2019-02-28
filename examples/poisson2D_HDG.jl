@@ -70,8 +70,7 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
 
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
-    rhs = Array{Float64}(undef, getnfaces(mesh)*n_basefuncs_t)
-    fill!(rhs,0)
+    rhs = zeros(Float64, getnfaces(mesh)*n_basefuncs_t)
     K_element = Array{AbstractMatrix{Float64}}(undef, getncells(mesh))
     b_element = Array{AbstractVector{Float64}}(undef, getncells(mesh))
 
@@ -219,28 +218,28 @@ Etu_h = errornorm(u_h, u_ex)
 Etu_h <= 0.00006
 
 #Plot mesh
-using PyCall
-using PyPlot
-@pyimport matplotlib.tri as mtri
-m_nodes = get_vertices_matrix(mesh)
-triangles = getcells_matrix(mesh)
-triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
-PyPlot.triplot(triang, "ko-")
-
-#Plot avg(u_h)
-# We need avg since u_h is discontinuous
-nodalu_h = Vector{Float64}(undef, length(mesh.nodes))
-share_count = zeros(Int,length(mesh.nodes))
-fill!(nodalu_h,0)
-for (k,cell) in enumerate(mesh.cells)
-    for node in cell.nodes
-        u = value(u_h, k, mesh.nodes[node].x)
-        nodalu_h[node] += u
-        share_count[node] += 1
-    end
-end
-nodalu_h = nodalu_h./share_count
-PyPlot.tricontourf(triang, nodalu_h)
+# using PyCall
+# using PyPlot
+# @pyimport matplotlib.tri as mtri
+# m_nodes = get_vertices_matrix(mesh)
+# triangles = getcells_matrix(mesh)
+# triang = mtri.Triangulation(m_nodes[:,1], m_nodes[:,2], triangles)
+# PyPlot.triplot(triang, "ko-")
+#
+# #Plot avg(u_h)
+# # We need avg since u_h is discontinuous
+# nodalu_h = Vector{Float64}(undef, length(mesh.nodes))
+# share_count = zeros(Int,length(mesh.nodes))
+# fill!(nodalu_h,0)
+# for (k,cell) in enumerate(mesh.cells)
+#     for node in cell.nodes
+#         u = value(u_h, k, mesh.nodes[node].x)
+#         nodalu_h[node] += u
+#         share_count[node] += 1
+#     end
+# end
+# nodalu_h = nodalu_h./share_count
+# PyPlot.tricontourf(triang, nodalu_h)
 
 # ### Exporting to VTK
 # To visualize the result we export the grid and our field `u`

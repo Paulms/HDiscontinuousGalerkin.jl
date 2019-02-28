@@ -132,12 +132,12 @@ K, b = doassemble(Wh, K, dh);
 apply!(K,b,dbc);
 u = K \ b;
 
-# reconstruct!(u_h, u, dh)
-# #
-# # # ### Compute errors
-# u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
-# Etu_h = errornorm(u_h, u_ex)
-# Etu_h <= 0.0002
+reconstruct!(u_h, u, dh)
+#
+# # ### Compute errors
+u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])
+Etu_h = errornorm(u_h, u_ex)
+Etu_h <= 0.0002
 #
 # # ### Plot Solution
 # #Plot mesh
