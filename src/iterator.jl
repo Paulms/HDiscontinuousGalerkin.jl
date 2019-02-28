@@ -58,3 +58,5 @@ end
 
 @inline reinit!(fs::DiscreteFunctionSpace{dim,T,FE}, ci::CellIterator{dim,N1,N2,N3,T}) where {dim,N1,N2,N3,T,FE} = reinit!(fs, ci.coords)
 function_value(f::Function, fs::DiscreteFunctionSpace{dim,T,FE}, ci::CellIterator,q_point::Int) where {dim,T,FE} = function_value(f,fs, ci.current_cellid[],q_point)
+@inline getnfaces(ci::CellIterator{dim,N}) where {dim,N} = getnfaces(ci.mesh.cells[ci.current_cellid[]])
+@inline face_orientation(ci::CellIterator{dim,N}, face_idx::Int) where {dim,N} = face_orientation(ci.mesh, ci.current_cellid[], face_idx)

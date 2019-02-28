@@ -36,14 +36,14 @@ using LinearAlgebra
 #or use internal mesh
 mesh = rectangle_mesh(TriangleCell, (10,10), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 
-# ### Initiate function Spaces
+# ### Trial and test functions
 dim = 2
 finiteElement = GenericFiniteElement(Dubiner{dim,RefTetrahedron,1}())
-Wh, Whf = ScalarFunctionSpace(mesh, finiteElement)
-Vh, Vhf = VectorFunctionSpace(mesh, finiteElement)
-Mh = ScalarTraceFunctionSpace(mesh, Whf, GenericFiniteElement(Legendre{dim-1,RefTetrahedron,1}()))
+Wh = ScalarFunctionSpace(mesh, finiteElement)
+Vh = VectorFunctionSpace(mesh, finiteElement)
+Mh = ScalarTraceFunctionSpace(Wh, GenericFiniteElement(Legendre{dim-1,RefTetrahedron,1}()))
 
-# Declare variables
+# Variables
 û_h = TrialFunction(Mh)
 σ_h = TrialFunction(Vh)
 u_h = TrialFunction(Wh)
@@ -71,14 +71,13 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
     # create a matrix assembler and rhs vector
     assembler = start_assemble(getnfaces(mesh)*n_basefuncs_t)
     rhs = Array{Float64}(undef, getnfaces(mesh)*n_basefuncs_t)
-    fill!(rhs,0.0)
-    ff = interpolate(f, Wh)
-
-    # Preallocate vectors to store data for u and σ recovery
+    fill!(rhs,0)
     K_element = Array{AbstractMatrix{Float64}}(undef, getncells(mesh))
     b_element = Array{AbstractVector{Float64}}(undef, getncells(mesh))
 
-    for cell_idx in 1:getncells(mesh)
+    @inbounds for (cell_idx, cell) in enumerate(CellIterator(mesh))
+        reinit!(Wh, cell)
+        reinit!(Vh, cell)
         fill!(Ae, 0)
         fill!(Be, 0)
         fill!(Ce, 0)
@@ -88,10 +87,10 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
         fill!(be, 0)
         #Cell integrals
         for q_point in 1:getnquadpoints(Vh)
-            dΩ = getdetJdV(Vh, cell_idx, q_point)
+            dΩ = getdetJdV(Vh, q_point)
             for i in 1:n_basefuncs
                 vh  = shape_value(Vh, q_point, i)
-                div_vh = shape_divergence(Vh, q_point, i, cell_idx)
+                div_vh = shape_divergence(Vh, q_point, i)
                 for j in 1:n_basefuncs
                     σ = shape_value(Vh, q_point, j)
                     # Integral σ⋅v dΩ
@@ -106,37 +105,37 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
         end
         #RHS
         for q_point in 1:getnquadpoints(Wh)
-            dΩ = getdetJdV(Wh, cell_idx, q_point)
+            dΩ = getdetJdV(Wh, q_point)
             for i in 1:n_basefuncs_s
                 w  = shape_value(Wh, q_point, i)
-                fh = value(ff, cell_idx,q_point)
+                fh = function_value(f, Wh, cell, q_point)
                 # Integral f*u dΩ
                 be[i] += fh*w*dΩ
             end
         end
         #Face integrals
-        for face_idx in 1:getnfaces(mesh.cells[cell_idx])
-            for q_point in 1:getnfacequadpoints(Whf)
-                dS = getdetJdS(Whf, cell_idx, face_idx, q_point)
-                orientation = face_orientation(mesh, cell_idx, face_idx)
+        for face_idx in 1:getnfaces(cell)
+            for q_point in 1:getnfacequadpoints(Wh)
+                dS = getfacedetJdS(Wh, face_idx, q_point)
+                orientation = face_orientation(cell, face_idx)
                 for i in 1:n_basefuncs_s
-                    w = shape_value(Whf, face_idx, q_point, i)
+                    w = shape_value(Wh, face_idx, q_point, i)
                     for j in 1:n_basefuncs_s
-                        u = shape_value(Whf, face_idx, q_point, j)
+                        u = shape_value(Wh, face_idx, q_point, j)
                         # Integral_∂T τ*u ⋅ w dS
                         Ce[i,j] += τ*(u*w) * dS
                     end
-                    w = shape_value(Whf, face_idx, q_point, i, orientation)
+                    w = shape_value(Wh, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T τ*û*w  dS
                         Fe[i,n_basefuncs_t*(face_idx-1)+j] += (τ*(û*w)) * dS
                     end
                 end
-                dS = getdetJdS(Mh, cell_idx, face_idx, q_point)
-                n = get_normal(Vhf, cell_idx, face_idx)
+                dS = getfacedetJdS(Mh, face_idx, q_point)
+                n = get_normal(Vh, face_idx)
                 for i in 1:n_basefuncs
-                    v = shape_value(Vhf, face_idx, q_point, i, orientation)
+                    v = shape_value(Vh, face_idx, q_point, i, orientation)
                     for j in 1:n_basefuncs_t
                         û = shape_value(Mh, q_point, j)
                         # Integral_∂T û(v⋅n)  dS
@@ -187,6 +186,15 @@ function doassemble(Vh, Wh, Mh, τ = 1.0)
     return end_assemble(assembler), rhs, K_element, b_element
 end
 
+### Solution of the system
+K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
+
+# To account for the boundary conditions we use the `apply!` function.
+# This modifies elements in `K` and `f` respectively, such that
+# we can get the correct solution vector `u` by using `\`.
+apply!(K,b,dbc)
+û = K \ b;
+#Now we recover original variables from skeleton û
 function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
     n_cells = getncells(mesh)
     n_basefuncs = getnbasefunctions(σ_h)
@@ -203,20 +211,7 @@ function get_uσ!(σ_h,u_h,û_h,û, K_e, b_e, mesh)
         u_h.m_values[cell_idx,:] = dof[n_basefuncs+1:end]
     end
 end
-#md nothing # hide
 
-### Solution of the system
-K, b, K_e, b_e = doassemble(Vh,Wh,Mh);
-
-# To account for the boundary conditions we use the `apply!` function.
-# This modifies elements in `K` and `f` respectively, such that
-# we can get the correct solution vector `u` by using `\`.
-apply!(K,b,dbc)
-#using IterativeSolvers
-#û = gmres(K,b)
-û = K \ b;
-
-#Now we recover original variables from skeleton û
 get_uσ!(σ_h, u_h,û_h,û, K_e, b_e, mesh)
 #Compute errors
 u_ex(x::Vec{dim}) = sin(π*x[1])*sin(π*x[2])

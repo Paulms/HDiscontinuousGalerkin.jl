@@ -85,7 +85,7 @@ export start_assemble, assemble!, end_assemble
 export VectorFunctionSpace, ScalarFunctionSpace, ScalarTraceFunctionSpace
 export getnquadpoints, getdetJdV, shape_value
 export shape_gradient, shape_divergence
-export getnfacequadpoints, getdetJdS
+export getnfacequadpoints, getfacedetJdS
 export face_shape_value
 export spatial_coordinate, reference_coordinate
 export getnlocaldofs

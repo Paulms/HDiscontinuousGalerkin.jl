@@ -1,51 +1,42 @@
-abstract type AbstractScalarTraceFunctionSpace{dim,T,FE,fdim,N1,N2,N3} <: DiscreteFunctionSpace{dim,T,FE} end
+abstract type AbstractScalarTraceFunctionSpace{dim,T,FE,fdim} <: DiscreteFunctionSpace{dim,T,FE} end
 # Scalar Trace Function Space (Scalar functions defined only on cell boundaries)
-struct ScalarTraceFunctionSpace{dim,T<:Real,fdim,FE<:FiniteElement,N1,N2,N3} <: AbstractScalarTraceFunctionSpace{dim,T,fdim,FE,N1,N2,N3}
+struct ScalarTraceFunctionSpace{dim,T<:Real,FE<:FiniteElement,fdim, FE2 <: FiniteElement,MM,N1,N2,N3} <: AbstractScalarTraceFunctionSpace{dim,T,FE,fdim}
     N::Matrix{T}
-    L::Array{T,3}
     dNdξ::Matrix{Vec{fdim,T}}
-    detJ::Matrix{T}
-    qr_weights::Vector{T}
-    mesh::PolygonalMesh{dim,N1,N2,N3,T}
     fe::FE
+    fs::ScalarFunctionSpace{dim,T, FE2, MM,N1,N2,N3,fdim}
 end
 
 #Constructor
-function ScalarTraceFunctionSpace(mesh::PolygonalMesh, psp::ScalarFunctionSpace{dim,fdim,T,1},
-    felem::FiniteElement{fdim,shape,order,gorder}) where {dim,fdim,shape,order,gorder,T}
-    detJ = psp.detJf
-    qr_weights = psp.qr_face_weigths
+function ScalarTraceFunctionSpace(psp::ScalarFunctionSpace{dim,T, FE, MM,N1,N2,N3,fdim},
+    felem::FiniteElement{fdim,shape,order,gorder}) where {dim, T, FE, MM, N1,N2,N3,fdim,shape,order,gorder}
     qr_points = psp.qr_face_points
-    ScalarTraceFunctionSpace(felem, detJ, qr_weights, qr_points, psp.L, mesh)
-end
-
-function ScalarTraceFunctionSpace(felem::FiniteElement{dim,refshape,order},
-    detJ::Matrix{T}, qr_weights::Vector, qr_points::Vector, L::Array{T,3}, mesh::PolygonalMesh{dim2,N1,N2,N3,T}) where {dim, refshape, order, T,N1,N2,N3,dim2}
+    qr_weights = psp.qr_face_weigths
     n_qpoints = length(qr_weights)
 
     # Function interpolation
     n_func_basefuncs = getnbasefunctions(felem)
     N    = fill(zero(T)          * T(NaN), n_func_basefuncs, n_qpoints)
-    dNdξ = fill(zero(Vec{dim,T}) * T(NaN), n_func_basefuncs, n_qpoints)
+    dNdξ = fill(zero(Vec{fdim,T}) * T(NaN), n_func_basefuncs, n_qpoints)
 
     for (qp, ξ) in enumerate(qr_points)
         for i in 1:n_func_basefuncs
             dNdξ[i, qp], N[i, qp]  = gradient(ξ -> value(felem, i, ξ), ξ, :all)
         end
     end
-    ScalarTraceFunctionSpace{dim2,T,dim,typeof(felem),N1,N2,N3}(N, L, dNdξ,detJ, qr_weights, mesh, felem)
+    ScalarTraceFunctionSpace{dim,T,typeof(felem),fdim, FE, MM,N1,N2,N3}(N, dNdξ,felem, psp)
 end
 
 #Data
 @inline getnbasefunctions(fs::ScalarTraceFunctionSpace) = size(fs.N,1)
-@inline getnquadpoints(fs::ScalarTraceFunctionSpace) = length(fs.qr_weights)
+@inline getnquadpoints(fs::ScalarTraceFunctionSpace) = length(fs.fs.qr_face_weigths)
 #@inline getdetJdS(fs::ScalarTraceFunctionSpace{dim,T,2}, cell::Int, face::Int, q_point::Int) where {dim,T} = fs.detJ[cell,face,q_point]*fs.qr_weights[q_point]
-@inline getdetJdS(fs::ScalarTraceFunctionSpace, cell::Int, face::Int, q_point::Int) = fs.detJ[cell,face]*fs.qr_weights[q_point]
+@inline getfacedetJdS(fs::ScalarTraceFunctionSpace, face::Int, q_point::Int) = getfacedetJdS(fs.fs, face, q_point)
 @inline shape_value(fs::ScalarTraceFunctionSpace, q_point::Int, base_func::Int) = fs.N[base_func, q_point]
-@inline getngeobasefunctions(fs::ScalarTraceFunctionSpace) = size(fs.L,1)
-@inline geometric_value(fs::ScalarTraceFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.L[base_func, q_point, face]
-@inline getnlocaldofs(fs::ScalarTraceFunctionSpace) = getnbasefunctions(fs)*size(fs.L,3)
-@inline getmesh(fs::ScalarTraceFunctionSpace) = fs.mesh
+@inline getngeobasefunctions(fs::ScalarTraceFunctionSpace) = size(fs.fs.L,1)
+@inline geometric_value(fs::ScalarTraceFunctionSpace, face::Int, q_point::Int, base_func::Int) = fs.fs.L[base_func, q_point, face]
+@inline getnlocaldofs(fs::ScalarTraceFunctionSpace) = getnbasefunctions(fs)*size(fs.fs.L,3)
+@inline getmesh(fs::ScalarTraceFunctionSpace) = getmesh(fs.fs)
 @inline getfiniteelement(fs::ScalarTraceFunctionSpace) = fs.fe
 
 """
