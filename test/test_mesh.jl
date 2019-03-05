@@ -14,7 +14,7 @@ mesh = parse_mesh_triangle(root_file)
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/4
 end
-@test getcells_matrix(mesh) == [1 2 4; 3 0 4; 4 2 3; 0 1 4]
+@test getcells_matrix(mesh) == [2 3 5; 4 1 5; 5 3 4; 1 2 5]
 @test get_vertices_matrix(mesh) == [0.0 0.0; 1.0 0.0; 1.0 1.0; 0.0 1.0; 0.5 0.5]
 # Check expected data for cell 1
 @test mesh.cells[1].nodes == (2,3,5)
@@ -33,7 +33,7 @@ mesh = rectangle_mesh(TriangleCell, (2,2), Vec{2}((0.0,0.0)), Vec{2}((1.0,1.0)))
 for cell in mesh.cells
     @test volume(get_coordinates(cell,  mesh)) ≈ 1/8
 end
-@test getcells_matrix(mesh) == [0 1 3; 1 4 3; 1 2 4; 2 5 4; 3 4 6; 4 7 6; 4 5 7; 5 8 7]
+@test getcells_matrix(mesh) == [1 2 4; 2 5 4; 2 3 5; 3 6 5; 4 5 7; 5 8 7; 5 6 8; 6 9 8]
 @test get_vertices_matrix(mesh) == [0.0 0.0; 0.5 0.0; 1.0 0.0; 0.0 0.5; 0.5 0.5; 1.0 0.5; 0.0 1.0; 0.5 1.0; 1.0 1.0]
 # Check expected data for cell 1
 @test mesh.cells[1].nodes == (1,2,4)

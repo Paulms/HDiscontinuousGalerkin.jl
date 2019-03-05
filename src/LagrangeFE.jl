@@ -32,7 +32,7 @@ end
 
 function _nodal_data(dim::Int,shape::Type{Shape}, order::Int) where {Shape <: AbstractRefShape}
     nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
-    ip_prime = getdafaultdualbasis(dim,shape,order)
+    ip_prime = getdefaultdualbasis(dim,shape,order)
     nbasefuncs = getnbasefunctions(ip_prime)
     V = [value(ip_prime, j, nodal_points[i]) for i=1:nbasefuncs,j = 1:nbasefuncs]
     return inv(V), topology

@@ -241,7 +241,7 @@ end
 
 isnodal(ip::Lagrange) = true
 
-function getdafaultdualbasis(dim::Int,shape,order::Int)
+function getdefaultdualbasis(dim::Int,shape,order::Int)
     if dim == 1
         return Legendre{1,shape,order}()
     elseif dim == 2
@@ -264,7 +264,7 @@ end
 function Lagrange{dim,shape,order}() where {dim,shape, order}
     nodal_points, topology = get_nodal_points(shape, Val{dim}, order)
     nodals=[x->x(point) for point in nodal_points]
-    ip_prime = getdafaultdualbasis(dim,shape,order)
+    ip_prime = getdefaultdualbasis(dim,shape,order)
     nbasefuncs = getnbasefunctions(ip_prime)
     prime_base = [x->value(ip_prime, j, x) for j in 1:nbasefuncs]
     V = reshape([nodals[i](prime_base[j]) for j = 1:nbasefuncs for i=1:nbasefuncs],(nbasefuncs,nbasefuncs))

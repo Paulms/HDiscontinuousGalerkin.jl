@@ -60,34 +60,38 @@ function TrialFunction(fs::DiscreteFunctionSpace{dim}, components::Int, m_values
     return TrialFunction{dim,T,getshape(getfiniteelement(fs)),N}(fs, m_values, components)
 end
 
-"""
-function value(u_h::TrialFunction, cell::Int, q_point::Int)
-    get trial function value on cell `cell` at quadrature point
-        `q_point`
-"""
-function value(u_h::TrialFunction{dim,T}, cell::Int, q_point::Int) where {dim,T}
-    u = zero(T)
-    for i in 1:getnbasefunctions(u_h.fs)
-        u  += u_h.m_values[cell, i]*shape_value(u_h.fs, q_point, i)
-    end
-    return u
-end
+reference_coordinate(fs::ScalarFunctionSpace{dim,T},
+x_ref::Vec{dim,T}, x::Vec{dim,T}) where {dim,T} = fs.Jinv[]⋅(x-x_ref)
 
-@inline reference_coordinate(fs::ScalarFunctionSpace{dim,T},cell::Int,
-x_ref::Vec{dim,T}, x::Vec{dim,T}) where {dim,T} =
-fs.Jinv[cell]⋅(x-x_ref)
 """
 function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T})
     get trial function value on cell `cell` at point `x`
 """
-function value(u_h::TrialFunction{dim,T}, cell::Int, x::Vec{dim,T}) where {dim,T}
+function value(u_h::TrialFunction{dim,T}, node::Int, cell::Int) where {dim,T}
     u = zero(T)
     mesh = getmesh(u_h.fs)
-    ξ = reference_coordinate(u_h.fs, cell, mesh.nodes[mesh.cells[cell].nodes[1]].x, x)
+    x = mesh.nodes[node].x
+    ξ = reference_coordinate(u_h.fs, mesh.nodes[mesh.cells[cell].nodes[1]].x, x)
     for i in 1:getnbasefunctions(u_h.fs)
         u  += u_h.m_values[cell, i]*value(getfiniteelement(u_h.fs), i, ξ)
     end
     return u
+end
+
+function nodal_avg(u_h::TrialFunction{dim,T}) where {dim,T}
+    mesh = getmesh(u_h.fs)
+    nodalu_h = Vector{Float64}(undef, length(mesh.nodes))
+    share_count = zeros(Int,length(mesh.nodes))
+    fill!(nodalu_h,0)
+    @inbounds for (cell_idx, cell) in enumerate(CellIterator(mesh))
+        reinit!(u_h, cell)
+        for node in getnodes(cell)
+            u = value(u_h, node, cell)
+            nodalu_h[node] += u
+            share_count[node] += 1
+        end
+    end
+    return nodalu_h./share_count
 end
 
 function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, norm_type::String="L2") where {dim,T}
@@ -95,15 +99,17 @@ function errornorm(u_h::TrialFunction{dim,T}, u_ex::Function, norm_type::String=
     Etu_h = zero(T)
     if norm_type == "L2"
         n_basefuncs_s = getnbasefunctions(u_h)
-        for (k,cell) in enumerate(getcells(mesh))
+        @inbounds for (cell_idx, cell) in enumerate(CellIterator(mesh))
+            reinit!(u_h, cell)
             Elu_h = zero(T)
-            coords = get_coordinates(cell, mesh)
-            reinit!(u_h.fs, coords)
             for q_point in 1:getnquadpoints(u_h.fs)
                 dΩ = getdetJdV(u_h.fs, q_point)
-                u = value(u_h, k, q_point)
+                u = zero(T)
+                for i in 1:getnbasefunctions(u_h.fs)
+                    u  += u_h.m_values[cell.current_cellid[], i]*shape_value(u_h.fs, q_point, i)
+                end
                 # Integral (u_h - u_ex) dΩ
-                Elu_h += (u-u_ex(spatial_coordinate(u_h.fs, q_point, coords)))^2*dΩ
+                Elu_h += (u-u_ex(spatial_coordinate(u_h.fs, q_point, cell.coords)))^2*dΩ
             end
             Etu_h += Elu_h
         end

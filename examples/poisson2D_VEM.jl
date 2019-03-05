@@ -62,5 +62,14 @@ u[collect(boundary_nodes)] = boundary_vals; # Set the boundary values
 #plot solution
 coordinates = get_vertices_matrix(mesh);
 connectivity = getcells_matrix(mesh);
-# using Makie
-# poly(coordinates, connectivity, color = u, strokecolor = (:black, 0.6), strokewidth = 4)
+color = u
+using Makie, CairoMakie
+using ColorSchemes
+scene = Scene(resolution = (400, 200), colorrange = (0.0, 1.0), colormap = ColorSchemes.viridis.colors)
+for row in 1:size(connectivity)[1]
+	#read coordinates
+	points = node(:poly, Point2f0[coordinates[i,:] for i in connectivity[row,:]])
+	colors = get(ColorSchemes.viridis, [color[i] for i in connectivity[row,:]])
+	poly!(scene, points, strokewidth = 1, strokecolor = :black, color = colors, show_axis = true, scale_plot = false)
+end
+display(scene)

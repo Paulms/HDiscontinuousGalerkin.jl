@@ -97,7 +97,7 @@ export reinit!
 export function_value
 export TrialFunction
 export errornorm
-export function_value
+export function_value, nodal_avg
 
 #Handlers
 export DofHandler, ndofs, ndofs_per_cell, celldofs!

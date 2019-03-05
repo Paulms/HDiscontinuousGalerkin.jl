@@ -43,7 +43,7 @@ end
 struct PolygonalMesh{dim,N,M,K,T} <: AbstractPolygonalMesh
     cells::Vector{Cell{dim,N,M}}
     nodes::Vector{Node{dim,T}}
-    faces::Matrix{Int}
+    faces::Matrix{Int}                   # v1 v2 cell1 cell2/0
     facesets::Dict{String,Set{Int}}
     nodesets::Dict{String,Set{Int}}
 end
@@ -63,7 +63,7 @@ end
 function getcells_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     cells_m = Matrix{Int}(undef, getncells(mesh), n_faces_per_cell(mesh))
     for k = 1:getncells(mesh)
-        @. cells_m[k,:] = mesh.cells[k].nodes - 1
+        @. cells_m[k,:] = mesh.cells[k].nodes
     end
     cells_m
 end
