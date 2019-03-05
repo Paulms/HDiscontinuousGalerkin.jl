@@ -20,8 +20,15 @@ struct Cell{dim, N, M}
 end
 
 #Common cell types
+#Common cell types
 const TriangleCell = Cell{2,3,3}
 @inline get_cell_name(::TriangleCell) = "Triangle"
+@inline reference_edge_nodes(::Type{TriangleCell}) = ((2,3),(3,1),(1,2))
+
+const RectangleCell = Cell{2,4,4}
+@inline get_cell_name(::RectangleCell) = "Rectangle"
+@inline reference_edge_nodes(::Type{RectangleCell}) = ((1,2),(2,3),(3,4),(4,1))
+
 @inline getnfaces(cell::Cell{dim,N,M}) where {dim,N,M} = M
 function topology_elements(cell::Cell{2},element::Int)
     if element == 0
@@ -36,8 +43,9 @@ end
 struct PolygonalMesh{dim,N,M,K,T} <: AbstractPolygonalMesh
     cells::Vector{Cell{dim,N,M}}
     nodes::Vector{Node{dim,T}}
-    faces::Matrix{Int}
+    faces::Matrix{Int}                   # v1 v2 cell1 cell2/0
     facesets::Dict{String,Set{Int}}
+    nodesets::Dict{String,Set{Int}}
 end
 
 function face_orientation(mesh::PolygonalMesh{2,3,3}, cell_idx::Int, face_idx::Int)
@@ -52,10 +60,10 @@ function get_vertices_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,
     end
     nodes_m
 end
-function get_cells_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
+function getcells_matrix(mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     cells_m = Matrix{Int}(undef, getncells(mesh), n_faces_per_cell(mesh))
     for k = 1:getncells(mesh)
-        @. cells_m[k,:] = mesh.cells[k].nodes - 1
+        @. cells_m[k,:] = mesh.cells[k].nodes
     end
     cells_m
 end
@@ -64,7 +72,9 @@ end
 @inline getnfaces(mesh::PolygonalMesh) = size(mesh.faces,1)
 @inline getnnodes(mesh::PolygonalMesh) = length(mesh.nodes)
 @inline getncells(mesh::PolygonalMesh) = length(mesh.cells)
-@inline get_faceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
+@inline getfaceset(mesh::PolygonalMesh, set::String) = mesh.facesets[set]
+@inline getnodeset(mesh::PolygonalMesh, set::String) = mesh.nodesets[set]
+@inline getnodesets(mesh::PolygonalMesh) = mesh.nodesets
 """
     getcoordinates(cell, mesh::PolygonalMesh)
 
@@ -104,8 +114,8 @@ end
 @inline function get_coordinates(face::Int, mesh::PolygonalMesh{dim,N,M,K,T}) where {dim,N,M,K,T}
     return [node.x for node in nodes(face,mesh)]::Vector{Vec{dim,T}}
 end
-@inline get_cells(mesh::PolygonalMesh) = mesh.cells
-@inline get_nodes(mesh::PolygonalMesh) = mesh.nodes
+@inline getcells(mesh::PolygonalMesh) = mesh.cells
+@inline getnodes(mesh::PolygonalMesh) = mesh.nodes
 @inline ndims(mesh::PolygonalMesh{dim}) where {dim} = dim
 @inline nodes(ele::Cell, mesh::PolygonalMesh) = [mesh.nodes[node] for node in ele.nodes]
 @inline nodes(face::Int, mesh::PolygonalMesh{dim,N,M,L}) where {dim,N,M,L} = [mesh.nodes[node] for node in mesh.faces[face,1:L]]
@@ -114,7 +124,7 @@ end
 @inline getnode(node::Int,face::Int, mesh::PolygonalMesh{dim,N,M,L}) where {dim,N,M,L} = mesh.nodes[mesh.faces[face,node]]
 
 function cell_diameter(mesh::PolygonalMesh{dim,N,M,NN,T}, idx::Int) where {dim,N,M,NN,T}
-    K = get_cells(mesh)[idx]
+    K = getcells(mesh)[idx]
     h = zero(T)
      for k in K.faces
         mσ = norm(get_coordinates(getnode(2, k, mesh)) - get_coordinates(getnode(1, k, mesh)))
@@ -132,4 +142,25 @@ function addfaceset!(mesh::PolygonalMesh, name::String, faceid::Set{Int})
     _warn_emptyset(faceset)
     mesh.facesets[name] = faceset
     mesh
+end
+
+#Check if cell has its vertices ordered counter-clockwise
+# Works for convex 2D polygons
+function check_orientation(mesh::PolygonalMesh{2,N,M}, cell_idx::Int) where {N,M}
+    return sum(verts[j][1]*verts[mod1(j+1,N)][2]-verts[mod1(j+1,N)][1]*verts[j][2] for j ∈ 1:N) > 0
+end
+
+function cell_volume(mesh::PolygonalMesh{2,N,M}, cell_idx::Int) where {N,M}
+    cell = mesh.cells[cell_idx]
+    verts = get_coordinates(cell,  mesh)
+    return 0.5*abs(sum(verts[j][1]*verts[mod1(j+1,N)][2]-verts[mod1(j+1,N)][1]*verts[j][2] for j ∈ 1:N))
+end
+
+function cell_centroid(mesh::PolygonalMesh{2,N,M}, cell_idx::Int) where {N,M}
+    cell = mesh.cells[cell_idx]
+    verts = get_coordinates(cell,  mesh)
+    Ve = cell_volume(mesh, cell_idx)
+    xc = 1/(6*Ve)*sum((verts[j][1]*verts[mod1(j+1,N)][2]-verts[mod1(j+1,N)][1]*verts[j][2])*(verts[j][1]+verts[mod1(j+1,N)][1]) for j ∈ 1:N)
+    yc = 1/(6*Ve)*sum((verts[j][1]*verts[mod1(j+1,N)][2]-verts[mod1(j+1,N)][1]*verts[j][2])*(verts[j][2]+verts[mod1(j+1,N)][2]) for j ∈ 1:N)
+    return Vec{2}((xc,yc))
 end

@@ -28,7 +28,7 @@ end
     assemble!(a, Ke, edof)
 Assembles the element matrix `Ke` into `a`.
 """
-function assemble!(a::Assembler{T}, edof::AbstractVector{Int}, Ke::AbstractMatrix{T}) where {T}
+function assemble!(a::Assembler{T}, edof::Union{AbstractVector{Int},NTuple{N,Int}}, Ke::AbstractMatrix{T}) where {N,T}
     n_dofs = length(edof)
     append!(a.V, Ke)
     @inbounds for j in 1:n_dofs

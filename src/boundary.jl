@@ -5,7 +5,7 @@ struct Dirichlet{T}  #<: Constraint
 end
 
 function Dirichlet(u::TrialFunction, mesh::PolygonalMesh, faceset::String,f::Function)
-    Dirichlet(getfunctionspace(u), mesh, get_faceset(mesh, faceset), f)
+    Dirichlet(getfunctionspace(u), mesh, getfaceset(mesh, faceset), f)
 end
 
 function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faceset::Set{Int},f::Function) where {T}
@@ -42,7 +42,7 @@ function Dirichlet(fs::ScalarTraceFunctionSpace{2,T}, mesh::PolygonalMesh, faces
 end
 
 function Dirichlet(u::TrialFunction, dh::DofHandler, faceset::String,f::Union{Function,Vector})
-    Dirichlet(u, dh, get_faceset(dh.mesh, faceset), getfunctionspace(u), getfiniteelement(getfunctionspace(u)), f)
+    Dirichlet(u, dh, getfaceset(dh.mesh, faceset), getfunctionspace(u), getfiniteelement(getfunctionspace(u)), f)
 end
 
 #TODO: only works for nodal basis
